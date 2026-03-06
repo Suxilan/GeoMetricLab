@@ -1,18 +1,18 @@
-[submodule "thirdparty/dinov2"]
-	path = thirdparty/dinov2
-	url = https://github.com/facebookresearch/dinov2.git
-[submodule "thirdparty/dinov3"]
-	path = thirdparty/dinov3
-	url = https://github.com/facebookresearch/dinov3.git
+[submodule "third_party/dinov2"]
+path = third_party/dinov2
+url = https://github.com/facebookresearch/dinov2.git
+[submodule "third_party/dinov3"]
+path = third_party/dinov3
+url = https://github.com/facebookresearch/dinov3.git
 [submodule "third_party/Boq"]
-	path = third_party/Boq
-	url = https://github.com/amaralibey/Bag-of-Queries.git
+path = third_party/Boq
+url = https://github.com/amaralibey/Bag-of-Queries.git
 [submodule "third_party/salad"]
-	path = third_party/salad
-	url = https://github.com/serizba/salad.git
+path = third_party/salad
+url = https://github.com/serizba/salad.git
 [submodule "third_party/CosPlace"]
-	path = third_party/CosPlace
-	url = https://github.com/gmberton/CosPlace.git
+path = third_party/CosPlace
+url = https://github.com/gmberton/CosPlace.git
 [submodule "third_party/CricaVPR"]
-	path = third_party/CricaVPR
-	url = https://github.com/Lu-Feng/CricaVPR.git
+path = third_party/CricaVPR
+url = https://github.com/Lu-Feng/CricaVPR.git

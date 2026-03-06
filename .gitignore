@@ -1,0 +1,38 @@
+__pycache__/
+*.ipynb
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+.vscode/
+*.log
+logs/
+checkpoints/
+data/
+output/
+wandb/
+.idea/
+*.egg-info/
+dist/
+build/
+weights/
+tests/
+cache/
+results/
+
+# Ignore third_party contents entirely (they should be submodules)
+/third_party/
+/thirdparty/
+
+# Keep only default config
+/config/**/*.yaml
+!/config/default.yaml
+
+# Only keep eval_gl3d and eval_university1652 in scripts
+/scripts/*
+!/scripts/eval_gl3d.py
+!/scripts/eval_university1652.py

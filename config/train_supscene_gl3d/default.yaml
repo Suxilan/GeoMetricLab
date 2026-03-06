@@ -1,0 +1,74 @@
+experiment: resnet50-gem-supscene-gl3d
+data:
+  train_datapath: data/GL3D/train
+  train_set_name: gl3d_subgraph
+  train_image_size: [388, 388]
+  val_set_names: [gl3d_test]
+  val_image_size: [512, 512]
+  batch_size: 1
+  num_workers: 4
+  n_sub: 128
+  iou_th: 0.2
+  scenes_per_epoch: null
+  samples_per_scene: null
+  adaptive_sampling: false
+  min_images_per_scene: 0
+  collate_diag_weight: null
+
+model:
+  backbone: resnet50
+  aggregator: gem
+  backbone_args: {
+    unfreeze_n_blocks: 1, 
+    pretrained: true,
+    crop_last_block: false
+  }
+  aggregator_args: {}
+  whitening: true
+  whitening_dim: 1024
+
+loss:
+  module: src.supscene.losses 
+  class: MultiSimilarityLoss
+  # params:
+  #   pos_th: 0.3
+  #   exclude_self: true
+  #   eps: 1e-8
+  #   m: 0.4
+  #   gamma: 80.0
+  params:
+    pos_th: 0.3
+    exclude_self: true
+    eps: 1.0e-8
+    alpha: 2.0
+    beta: 50.0
+    base: 0.5
+
+optimizer:
+  name: adamw
+  lr: 0.0001
+  weight_decay: 0.0001
+
+scheduler:
+  warmup_start_factor: 0.01
+  warmup_ratio: 0.1
+
+trainer:
+  max_epochs: 50
+  accelerator: gpu
+  devices: auto
+  strategy: auto
+  log_every_n_steps: 50
+  gradient_clip_val: 1.0
+  precision: 32
+  check_val_every_n_epoch: 1
+  monitor: gl3d_test-val/mAP
+  checkpoint:
+    save_last: true
+    save_top_k: 3
+    mode: max
+  early_stopping:
+    enabled: true
+    patience: 10
+    mode: max
+    min_delta: 0.0

@@ -1,10 +1,4 @@
-# ----------------------------------------------------------------------------
-# Copyright (c) 2024 Amar Ali-bey
-#
-# https://github.com/amaralibey/Bag-of-Queries
-#
-# See LICENSE file in the project root.
-# ----------------------------------------------------------------------------
+# Code adapted from amaralibey/Bag-of-Queries: https://github.com/amaralibey/Bag-of-Queries
 
 import torch
 import torch.nn as nn
@@ -43,7 +37,6 @@ class BoQBlock(torch.nn.Module):
         out = self.norm_out(out)
         return x, out, attn.detach()
 
-# adapted from Amar Ali-bey's Bag-of-Queries: https://github.com/amaralibey/Bag-of-Queries
 class BoQ(AggregatorBase):
     def __init__(self, in_channels=1024, proj_channels=512, num_queries=32, num_layers=2, row_dim=32):
         super().__init__()

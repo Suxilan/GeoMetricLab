@@ -1,3 +1,5 @@
+# Code adapted from Lu-Feng/SuperVLAD: https://github.com/Lu-Feng/SuperVLAD
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

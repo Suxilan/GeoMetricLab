@@ -1,3 +1,5 @@
+# Implementation inspired by keetsky/Net_ghostVLAD-pytorch: https://github.com/keetsky/Net_ghostVLAD-pytorch
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -23,6 +23,7 @@ import torch.nn.functional as F
 from typing import Tuple, Optional, Any
 from .base import AggregatorBase
 
+# Code adapted from filipradenovic/cnnimageretrieval-pytorch: https://github.com/filipradenovic/cnnimageretrieval-pytorch
 class GeM(AggregatorBase):
     """Generalized Mean Pooling (GeM) Aggregator.
     

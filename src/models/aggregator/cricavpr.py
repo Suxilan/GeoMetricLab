@@ -1,3 +1,5 @@
+# Code adapted from Lu-Feng/CricaVPR: https://github.com/Lu-Feng/CricaVPR
+
 import math
 from typing import Any, Dict, List, Optional, Tuple
 

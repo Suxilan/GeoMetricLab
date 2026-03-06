@@ -28,11 +28,34 @@ results/
 /third_party/
 /thirdparty/
 
-# Keep only default config
+# Keep only default configs under config/
 /config/**/*.yaml
+/config/**/*.yml
 !/config/default.yaml
+!/config/default.yml
+!/config/**/default.yaml
+!/config/**/default.yml
 
 # Only keep eval_gl3d and eval_university1652 in scripts
 /scripts/*
 !/scripts/eval_gl3d.py
 !/scripts/eval_university1652.py
+
+# Ignore model rerankers
+/src/models/reranker/**
+
+# Keep only selected aggregators
+/src/models/aggregator/*.py
+!/src/models/aggregator/__init__.py
+!/src/models/aggregator/avg.py
+!/src/models/aggregator/base.py
+!/src/models/aggregator/boq.py
+!/src/models/aggregator/cls.py
+!/src/models/aggregator/cosplace.py
+!/src/models/aggregator/cricavpr.py
+!/src/models/aggregator/eigenplace.py
+!/src/models/aggregator/gem.py
+!/src/models/aggregator/ghostvlad.py
+!/src/models/aggregator/netvlad.py
+!/src/models/aggregator/salad.py
+!/src/models/aggregator/supervlad.py

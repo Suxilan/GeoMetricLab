@@ -1,0 +1,66 @@
+experiment: uca-u1652
+
+# UCA is feature-cache based, not image based.
+data:
+  train_cache_root: cache/u1652
+  val_cache_root: cache/u1652
+  # keep it small for default smoke runs
+  max_k: 100
+  batch_size: 1024
+  val_batch_size: 512
+  num_workers: 4
+  # disable val by default to avoid expensive global-topK precompute on dev runs
+  val_set_names: []
+
+model:
+  embed_dim: 512
+  num_heads: 8
+  num_layers: 1
+  mlp_ratio: 4.0
+  dropout: 0.0
+  rope_base: 10000.0
+
+framework:
+  topk_drop_prob: 0.0
+  metric_weight: 1.0
+  aux_weight: 0.0
+
+loss:
+  module: src.losses.instance_losses
+  class: InstanceMetricLoss
+  params:
+    loss_fn_name: InstanceLoss
+    miner_name: null
+
+optimizer:
+  name: adamw
+  lr: 0.0001
+  weight_decay: 0.01
+  aux_lr: 1.0
+  aux_weight_decay: 0.01
+
+scheduler:
+  warmup_start_factor: 0.01
+  warmup_ratio: 0.1
+
+trainer:
+  max_epochs: 100
+  accelerator: auto
+  devices: 1
+  strategy: auto
+  log_every_n_steps: 1
+  gradient_clip_val: 1.0
+  precision: 32
+  sync_batchnorm: false
+  check_val_every_n_epoch: 1
+  # no val by default; monitor train loss
+  monitor: train/loss
+  checkpoint:
+    save_last: true
+    save_top_k: 1
+    mode: min
+  early_stopping:
+    enabled: false
+    patience: 5
+    mode: min
+    min_delta: 0.0

@@ -1,3 +1,5 @@
+# Code adapted from gmberton/CosPlace: https://github.com/gmberton/CosPlace
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -1,3 +1,5 @@
+# Code adapted from gmberton/EigenPlaces: https://github.com/gmberton/EigenPlaces
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -1,3 +1,6 @@
+# Code adapted from Nanne/pytorch-NetVlad: https://github.com/Nanne/pytorch-NetVlad
+# NetVLAD method reference: https://github.com/Relja/netvlad
+
 import faiss
 import torch
 import torch.nn as nn

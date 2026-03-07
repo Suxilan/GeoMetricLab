@@ -23,7 +23,9 @@ weights/
 tests/
 cache/
 results/
-vis/
+
+# Visualization outputs are local artifacts and should never be tracked.
+/vis/
 
 # Ignore third_party contents entirely (they should be submodules)
 /third_party/

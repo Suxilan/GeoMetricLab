@@ -104,7 +104,7 @@ These scripts support two common evaluation modes:
 
 ### 🔹 Implemented training / validation datasets
 
-- GL3D
+- GL3D(BlendedMVS)
 - University-1652
 
 ### 🔹 Repository data layout also includes
@@ -112,8 +112,8 @@ These scripts support two common evaluation modes:
 - ROxford
 - RParis
 - SfM-120k
-- Aachen
-- InLoc
+- GSVCities
+- MSLS
 
 Some of these datasets are used as local evaluation resources or experiment assets, while the officially maintained training engines in this repository currently target GL3D and University-1652 first.
 
@@ -128,7 +128,7 @@ GeoMetricLab is built around a practical research stack for modern retrieval exp
 - FAISS for fast nearest-neighbor search and VLAD-related clustering utilities
 - h5py for descriptor cache storage and feature IO
 - Weights & Biases and TensorBoard for experiment logging
-- PEFT for LoRA-style efficient adaptation of DINOv2 backbones
+- PEFT for LoRA-style efficient adaptation of Visual Foundation Model backbones
 
 ## 🔌 Third-party ecosystem
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import wandb
 import torch
@@ -10,11 +10,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 import torch.distributed as dist
-import torchvision.transforms.functional as TF
-import numpy as np
 from PIL import Image
 from pathlib import Path
-from src.utils import load_features_h5, load_vlad_init_h5
+from src.utils import load_features_h5
 from src.utils.metrics import compute_metrics, display_metrics
 from src.utils.vis import aux_to_overlay_pil, tensor_to_rgb_pil
 from src.models.projection import ProjectionHead
@@ -23,7 +21,7 @@ from config.loss_hubs import CLASSIFICATION_LOSSES
 
 class InstanceFramework(pl.LightningModule):
     """LightningModule for Instance Metric Learning.
-    
+
     Handles instance batch format: (B, 3, H, W) -> (B, D) -> Loss
     """
 
@@ -64,62 +62,58 @@ class InstanceFramework(pl.LightningModule):
             self.bn = nn.BatchNorm1d(out_dim, affine=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through model.
-        
+        """Run a forward pass through the encoder.
+
         Args:
             x: Input tensor of shape (B*N, C, H, W) or (B, N, C, H, W)
-        
+
         Returns:
             Features of shape (B*N, D) or (B, N, D)
         """
-        y = self.model(x)
-        return y
+        return self.model(x)
 
-    def _maybe_init_proj_head(self, in_dim) -> None:
+    def _maybe_init_proj_head(self, in_dim: int) -> None:
         if self.proj_head is None:
             self.proj_head = ProjectionHead(in_dim=in_dim)
 
-    def _maybe_init_bn(self, in_dim) -> None:
+    def _maybe_init_bn(self, in_dim: int) -> None:
         if self.bn is None:
             self.bn = nn.BatchNorm1d(in_dim, affine=False)
 
     def _apply_projection(self, descriptors: torch.Tensor) -> torch.Tensor:
         if not self.use_proj:
-            # maybe still have bn neck only
             if self.use_bn:
                 self._maybe_init_bn(descriptors.shape[-1])
-                out = self.bn(descriptors)
-                return F.normalize(out, p=2, dim=-1)
+                normalized = self.bn(descriptors)
+                return F.normalize(normalized, p=2, dim=-1)
             return descriptors
 
-        # apply projection head first
         self._maybe_init_proj_head(descriptors.shape[-1])
         projected = self.proj_head(descriptors)
 
-        # then optional BN neck
         if self.use_bn:
             self._maybe_init_bn(projected.shape[-1])
             projected = self.bn(projected)
 
         return F.normalize(projected, p=2, dim=-1)
 
-    def _slice_aux_sample(self, aux_info: Dict[str, Any], i: int) -> Dict[str, torch.Tensor]:
+    def _slice_aux_sample(self, aux_info: Dict[str, Any], sample_index: int) -> Dict[str, torch.Tensor]:
         aux_cpu: Dict[str, torch.Tensor] = {}
-        for k, v in aux_info.items():
-            if not torch.is_tensor(v):
+        for key, value in aux_info.items():
+            if not torch.is_tensor(value):
                 continue
-            if v.dim() >= 1:
-                if v.size(0) == 1:
-                    aux_cpu[k] = v[0].detach().cpu()
-                elif v.size(0) > i:
-                    aux_cpu[k] = v[i].detach().cpu()
+            if value.dim() >= 1:
+                if value.size(0) == 1:
+                    aux_cpu[key] = value[0].detach().cpu()
+                elif value.size(0) > sample_index:
+                    aux_cpu[key] = value[sample_index].detach().cpu()
                 else:
-                    aux_cpu[k] = v.detach().cpu()
+                    aux_cpu[key] = value.detach().cpu()
             else:
-                aux_cpu[k] = v.detach().cpu()
+                aux_cpu[key] = value.detach().cpu()
         return aux_cpu
 
-    def _build_optimizer_param_groups(self, base_lr: float, base_wd: float):
+    def _build_optimizer_param_groups(self, base_lr: float, base_wd: float) -> list[Dict[str, Any]]:
         """Build minimal optimizer groups:
         - backbone group: `backbone_lr`
         - aggregator group: `aggregator_lr` (includes whitening layer)
@@ -128,7 +122,7 @@ class InstanceFramework(pl.LightningModule):
         backbone_lr = float(self.optimizer_cfg.get("backbone_lr", base_lr))
         aggregator_lr = float(self.optimizer_cfg.get("aggregator_lr", base_lr))
 
-        named_params = [(n, p) for n, p in self.named_parameters() if p.requires_grad]
+        named_params = [(name, param) for name, param in self.named_parameters() if param.requires_grad]
         if len(named_params) == 0:
             raise RuntimeError("No trainable parameters found (all requires_grad=False).")
 
@@ -136,13 +130,13 @@ class InstanceFramework(pl.LightningModule):
         aggregator_params = []
         default_params = []
 
-        for n, p in named_params:
-            if n.startswith("model.backbone."):
-                backbone_params.append(p)
-            elif n.startswith("model.aggregator.") or n.startswith("model.whitening_layer."):
-                aggregator_params.append(p)
+        for name, param in named_params:
+            if name.startswith("model.backbone."):
+                backbone_params.append(param)
+            elif name.startswith("model.aggregator.") or name.startswith("model.whitening_layer."):
+                aggregator_params.append(param)
             else:
-                default_params.append(p)
+                default_params.append(param)
 
         param_groups = []
         self._lr_group_names = []
@@ -163,7 +157,7 @@ class InstanceFramework(pl.LightningModule):
             )
         return param_groups
     
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> Tuple[list[torch.optim.Optimizer], list[Dict[str, Any]]]:
         base_lr = float(self.optimizer_cfg.get("lr", 1e-4))
         base_wd = float(self.optimizer_cfg.get("weight_decay", 1e-4))
         param_groups = self._build_optimizer_param_groups(base_lr=base_lr, base_wd=base_wd)
@@ -175,12 +169,18 @@ class InstanceFramework(pl.LightningModule):
             optimizer = torch.optim.SGD(param_groups, momentum=self.optimizer_cfg.get("momentum", 0.9))
         else:
             raise ValueError(f"Unsupported optimizer: {self.optimizer_cfg.get('name', '')}")
-        
+
         warmup_start = float(self.scheduler_cfg.get("warmup_start_factor", 0.01))
         warmup_ratio = float(self.scheduler_cfg.get("warmup_ratio", 0.0))
-        total_steps = int(self.trainer.estimated_stepping_batches)
-        warmup_steps = int(total_steps * warmup_ratio)
-        cosine_steps = max(total_steps - warmup_steps, 1)
+
+        total_steps = int(getattr(self.trainer, "estimated_stepping_batches", 0) or 0)
+        if total_steps <= 0:
+            max_epochs = int(self.trainer.max_epochs)
+            warmup_steps = int(max_epochs * warmup_ratio)
+            cosine_steps = max(max_epochs - warmup_steps, 1)
+        else:
+            warmup_steps = int(total_steps * warmup_ratio)
+            cosine_steps = max(total_steps - warmup_steps, 1)
 
         if warmup_steps > 0:
             scheduler1 = torch.optim.lr_scheduler.LinearLR(
@@ -205,109 +205,98 @@ class InstanceFramework(pl.LightningModule):
                 T_max=cosine_steps,
                 eta_min=1e-7,
             )
-
+        
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
     
     # @torch.compiler.disable()
-    def compute_loss(self, descriptors: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        """
-        compute label based metric learning loss.
+    def compute_loss(self, descriptors: torch.Tensor, labels: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Compute the metric-learning loss for one batch.
 
         Args:
             descriptors: (B, D) feature descriptors
             labels: (B,) ground truth labels
         """
-
-        loss, acc = self.criterion(descriptors, labels)
-        return loss, acc
-
-    def compute_total_loss(self, main_loss: torch.Tensor, aux_info: Optional[Dict[str, Any]]) -> tuple[torch.Tensor, torch.Tensor]:
-        """Combine main task loss with optional auxiliary loss from aggregator."""
-        aux_loss = torch.zeros((), device=main_loss.device, dtype=main_loss.dtype)
-        if isinstance(aux_info, dict) and torch.is_tensor(aux_info.get("assign_map", None)):
-            assign_map = aux_info["assign_map"]
-            aggregator = getattr(self.model, "aggregator", None)
-            if aggregator is not None and hasattr(aggregator, "compute_aux_loss"):
-                extra = aggregator.compute_aux_loss(assign_map)
-                if torch.is_tensor(extra):
-                    aux_loss = extra.to(device=main_loss.device, dtype=main_loss.dtype)
-        total_loss = main_loss + aux_loss
-        return total_loss, aux_loss
+        return self.criterion(descriptors, labels)
 
     def init_whitening_from_h5(self, h5_path: Path) -> None:
-        """
-        Initialize whitening layer from precomputed features in H5 file.
-        """
-        # 1) 参数容器（在所有 rank 上都存在）
+        """Initialize the whitening layer from cached descriptors."""
         weight = self.model.whitening_layer.weight
         bias = self.model.whitening_layer.bias
-        device = weight.device  # 以参数所在 device 为准
+        device = weight.device
 
-        # 2) 只有 rank0 负责加载并计算
         if self.trainer.is_global_zero:
             self.print(f"[*] [Rank 0] Computing whitening from {h5_path}...")
             data = load_features_h5(h5_path)
             feats = data.get("features", None)
 
             if feats is not None:
-                X = torch.from_numpy(feats).float().to(device)  # (N, D)
-                self.model.init_whitening(X)        
+                features = torch.from_numpy(feats).float().to(device)
+                self.model.init_whitening(features)
             else:
                 self.print("[!] No 'features' in H5. Will broadcast current (random) init.")
 
-        # 3) DDP 同步：所有 rank 都必须执行
         if dist.is_available() and dist.is_initialized():
-            dist.barrier()  # 等 rank0 完成 copy_
-            dist.broadcast(weight.data, src=0)  # ✅ 用 .data
+            dist.barrier()
+            dist.broadcast(weight.data, src=0)
             dist.broadcast(bias.data, src=0)
             dist.barrier()
 
         self.print(f"[*] [Rank {self.global_rank}] Whitening parameters synced.")
 
-    def init_vlad_from_h5(self, h5_path: str) -> None:
-        """Initialize *VLAD from cached H5 (`centers` + `descriptors`)."""
-        agg = self.model.aggregator
+    def init_vlad_from_h5(self, h5_path: Path) -> None:
+        """Initialize *VLAD using K-Means on features from H5."""
+        aggregator = self.model.aggregator
 
         if self.trainer.is_global_zero:
-            self.print(f"[*] Init *VLAD from cached H5: {h5_path}...")
-            data = load_vlad_init_h5(Path(h5_path))
-            centers = data["centers"]
-            descriptors = data["descriptors"]
-            self.print(f"   Loaded centers {centers.shape}, descriptors {descriptors.shape}.")
-            agg.init_from_clusters(centers, descriptors)
+            self.print(f"[*] Init *VLAD from {h5_path}...")
+            import faiss
 
-        # --- 2. DDP: 同步参数给所有显卡 ---
+            data = load_features_h5(h5_path)
+            feats = data.get("features", None)
+
+            num_samples, channels, height, width = feats.shape
+            descriptors = feats.transpose(0, 2, 3, 1).reshape(-1, channels)
+            descriptors = np.ascontiguousarray(descriptors.astype(np.float32, copy=False))
+            self.print(f"   Loaded {descriptors.shape[0]} descriptors of dim {descriptors.shape[1]}.")
+
+            if getattr(aggregator, "normalize_input", False):
+                norms = np.linalg.norm(descriptors, axis=1, keepdims=True)
+                norms[norms == 0] = 1.0
+                descriptors /= norms
+
+            kmeans = faiss.Kmeans(
+                d=aggregator.in_channels,
+                k=aggregator.num_clusters,
+                niter=25,
+                verbose=True,
+                gpu=True,
+                seed=42,
+                max_points_per_centroid=16384,
+            )
+            kmeans.train(descriptors)
+
+            aggregator.init_from_clusters(kmeans.centroids, descriptors)
+
         if dist.is_available() and dist.is_initialized():
             dist.barrier()
-            if hasattr(agg, "centers"):
-                dist.broadcast(agg.centers, src=0)
-            dist.broadcast(agg.assign.weight, src=0)
-            if getattr(agg.assign, "bias", None) is not None:
-                dist.broadcast(agg.assign.bias, src=0)
+            if hasattr(aggregator, "centers"):
+                dist.broadcast(aggregator.centers, src=0)
+            dist.broadcast(aggregator.assign.weight, src=0)
+            if getattr(aggregator.assign, "bias", None) is not None:
+                dist.broadcast(aggregator.assign.bias, src=0)
             dist.barrier()
 
         self.print(f"[*] [Rank {self.global_rank}] *VLAD parameters synced.")
     
     def on_train_start(self):
-        """
-        Actions to perform at the start of training.
-        """
-        # If a whitening layer exists on the model, try to initialize it
-        # from a precomputed feature cache: cache/features_resnet50_gem_115562.h5
-
+        """Run optional parameter initialization before the first epoch."""
         if getattr(self.model, "whitening", False):
-            self.init_whitening_from_h5(
-                h5_path=Path("features_resnet50_gem_115562.h5"),
-            )
+            self.init_whitening_from_h5(h5_path=Path("features_resnet50_gem_115562.h5"))
 
-        # If using (*VLAD), optionally init from cached feature maps
         if getattr(self.model, "aggregator_name", "").lower() in ["netvlad", "supervlad"]:
-            cache_h5 = self.optimizer_cfg.get("vlad_init_c_h5", None)
-            if not cache_h5:
-                raise ValueError("Missing optimizer.vlad_init_c_h5 for VLAD initialization.")
-            self.init_vlad_from_h5(h5_path=Path(cache_h5))
+            self.init_vlad_from_h5(h5_path=Path("u1652/feature_maps_dinov2b14_reg_cls_10000.h5"))
 
-    def _log_images(self, key: str, images: list[Image.Image | tuple[Image.Image, Image.Image]], caption_prefix: str = ""):
+    def _log_images(self, key: str, images: list[Image.Image | tuple[Image.Image, Image.Image]], caption_prefix: str = "") -> None:
         if not images:
             return
         if isinstance(images[0], tuple):
@@ -319,26 +308,21 @@ class InstanceFramework(pl.LightningModule):
         experiment = getattr(self.logger, "experiment", None)
         
         if experiment and hasattr(experiment, "log"):
-
-             try:
+            try:
                 wandb_imgs = [wandb.Image(img, caption=f"{caption_prefix}_{i}") for i, img in enumerate(images)]
                 experiment.log({key: wandb_imgs, "epoch": self.current_epoch})
-             except Exception as e:
-                print(f"[Warn] Failed to log via self.logger: {e}")
-        # ...
+            except Exception as exc:
+                print(f"[Warn] Failed to log via self.logger: {exc}")
 
     def _create_vis_image(self, img_t: torch.Tensor, aux_t: object, key: str = "assign_map") -> Image.Image | tuple[Image.Image, Image.Image] | None:
         try:
-            # 1. return to RGB
             pil_rgb = tensor_to_rgb_pil(img_t)
-            
-            # 2. generate heatmap (use your previous utility function)
-            pil_overlay = aux_to_overlay_pil(aux_t, pil_rgb.size, key=key, cmap="jet") # viridis, plasma, inferno, magma, cividis, jet
+
+            pil_overlay = aux_to_overlay_pil(aux_t, pil_rgb.size, key=key, cmap="jet")
             
             if pil_overlay is None:
                 return None
-                
-            # 3. fusion
+
             if isinstance(pil_overlay, tuple):
                 blended = []
                 for overlay in pil_overlay:
@@ -350,17 +334,14 @@ class InstanceFramework(pl.LightningModule):
                 if pil_overlay.mode != 'RGB':
                     pil_overlay = pil_overlay.convert('RGB')
                 return Image.blend(pil_rgb, pil_overlay, alpha=0.45)
-        except Exception as e:
-            self.print(f"[Warn] Vis failed: {e}")
+        except Exception as exc:
+            self.print(f"[Warn] Vis failed: {exc}")
             return None
 
     ########################################################
     ################ Training loop starts here #############
     ########################################################
     def on_train_epoch_start(self):
-        """
-        Actions to perform at the start of each training epoch.
-        """
         if self.global_rank == 0:
             self.train_aux_samples = []
     
@@ -379,7 +360,7 @@ class InstanceFramework(pl.LightningModule):
         images, labels = batch
         model_output = self(images)  # (B*N, D)
 
-        # some models may return tuple outputs(x, auxiliary_data)
+        # Some aggregators return `(descriptors, aux_info)` during training.
         aux_info = None
         if isinstance(model_output, (tuple, list)):
             descriptors = model_output[0]
@@ -398,8 +379,6 @@ class InstanceFramework(pl.LightningModule):
             self.log("PStats/std", p_std, prog_bar=True, on_step=True, on_epoch=True, sync_dist=True)
             self.log("PStats/min", p_min_v, prog_bar=True, on_step=True, on_epoch=True, sync_dist=True)
             self.log("PStats/max", p_max_v, prog_bar=True, on_step=True, on_epoch=True, sync_dist=True)
-
-
         VIS_LIMIT = 4
         if self.global_rank == 0 and aux_info is not None:
             self.train_aux_samples = [] 
@@ -417,25 +396,19 @@ class InstanceFramework(pl.LightningModule):
 
         descriptors = self._apply_projection(descriptors)
 
-        # Compute loss
-        # For some classification-style losses we MUST NOT offset labels across ranks
+        # Classification losses use original labels; metric-learning losses need
+        # a rank-aware offset to avoid collisions in distributed training.
         loss_name = getattr(self.criterion, "loss_fn_name", None)
         if loss_name is None:
-            # fallback: do not alter labels
             pass
         else:
-            # if base loss belongs to CLASSIFICATION_LOSSES, skip rank offset
             if loss_name not in CLASSIFICATION_LOSSES:
                 rank = self.global_rank
-                labels = labels + rank * 100000  # for distributed training
+                labels = labels + rank * 100000
 
-        main_loss, acc = self.compute_loss(descriptors, labels)
-        loss, aux_loss = self.compute_total_loss(main_loss, aux_info)
+        loss, acc = self.compute_loss(descriptors, labels)
 
-        # Logging
         self.log("train/loss", loss, prog_bar=True, on_step=True, on_epoch=True, batch_size=images.size(0), sync_dist=True)
-        self.log("train/loss_main", main_loss, prog_bar=False, on_step=True, on_epoch=True, batch_size=images.size(0), sync_dist=True)
-        self.log("train/loss_aux", aux_loss, prog_bar=False, on_step=True, on_epoch=True, batch_size=images.size(0), sync_dist=True)
         self.log("train/acc", acc, prog_bar=True, on_step=True, on_epoch=True, batch_size=images.size(0), sync_dist=True)
         if isinstance(aux_info, dict) and "discard_map" in aux_info and torch.is_tensor(aux_info["discard_map"]):
             discard_map = aux_info["discard_map"]
@@ -443,14 +416,31 @@ class InstanceFramework(pl.LightningModule):
             self.log("train/discard_rate", discard_rate, prog_bar=True, on_step=True, on_epoch=True, batch_size=images.size(0), sync_dist=True)
         return loss
 
+    def on_train_batch_end(self, outputs, batch, batch_idx: int) -> None:
+        """Log LR of each optimizer param-group at step granularity."""
+        opt = self.optimizers(use_pl_optimizer=False)
+        if isinstance(opt, (list, tuple)):
+            if len(opt) == 0:
+                return
+            opt = opt[0]
+
+        group_names = getattr(self, "_lr_group_names", [])
+        for i, pg in enumerate(opt.param_groups):
+            name = group_names[i] if i < len(group_names) else f"group{i}"
+            self.log(
+                f"lr/{name}",
+                float(pg.get("lr", 0.0)),
+                prog_bar=(name in ["backbone", "aggregator"]),
+                on_step=True,
+                on_epoch=False,
+                logger=True,
+                sync_dist=False,
+            )
+    
     def on_train_epoch_end(self):
-        """
-        Actions to perform at the end of each training epoch.
-        """
         if self.global_rank != 0 or not getattr(self, "train_aux_samples", None):
             return
 
-        # 2. process images
         processed_assign = []
         processed_discard = []
         for img_t, aux_t in self.train_aux_samples:
@@ -461,21 +451,14 @@ class InstanceFramework(pl.LightningModule):
             if pil_discard:
                 processed_discard.append(pil_discard)
 
-        # 3. log images
         self._log_images("train_aux/assign_vis", processed_assign, caption_prefix=f"ep{self.current_epoch}")
         self._log_images("train_aux/discard_vis", processed_discard, caption_prefix=f"ep{self.current_epoch}")
-
-        # 4. clear samples
         self.train_aux_samples = []
     
     ########################################################
     ################ Validation loop starts here ###########
     ########################################################
     def on_validation_epoch_start(self):
-        """
-        Actions to perform at the start of each validation epoch.
-        """
-        # we init an empty dictionary to store the descriptors for each dataloader
         self.validation_step_outputs = {}
         if self.global_rank == 0:
             self.val_aux_samples = []
@@ -496,7 +479,7 @@ class InstanceFramework(pl.LightningModule):
         images, indices = batch
         model_output = self(images)  # (B, D), ()
 
-        # some models may return tuple outputs(x, auxiliary_data)
+        # Validation can also receive auxiliary outputs for visualization.
         aux_info = None
         if isinstance(model_output, (tuple, list)):
             descriptors = model_output[0]
@@ -507,7 +490,7 @@ class InstanceFramework(pl.LightningModule):
 
         VIS_LIMIT = 4
         if self.global_rank == 0 and aux_info is not None:
-            self.train_aux_samples = [] 
+            self.val_aux_samples = []
             num_to_keep = min(VIS_LIMIT, images.size(0))
             for i in range(num_to_keep):
                 img_cpu = images[i].detach().cpu()
@@ -518,24 +501,18 @@ class InstanceFramework(pl.LightningModule):
                     aux_cpu = aux_info[i].detach().cpu()
                 
                 if aux_cpu is not None:
-                    self.train_aux_samples.append((img_cpu, aux_cpu))
+                    self.val_aux_samples.append((img_cpu, aux_cpu))
                   
         if dataloader_idx not in self.validation_step_outputs:
-            # initialize the list of descriptors for this dataloader
             self.validation_step_outputs[dataloader_idx] = {'descriptors': [], 'indices': []}
     
         self.validation_step_outputs[dataloader_idx]['descriptors'].append(descriptors.detach().cpu())
         self.validation_step_outputs[dataloader_idx]['indices'].append(indices.detach().cpu())
 
     def on_validation_epoch_end(self):
-        """
-        End of validation: Gather, Sort, Compute Metrics.
-        """
         dm = self.trainer.datamodule
-        
-        # 遍历每个验证集 (dataloader)
+
         for dataloader_idx, outputs in self.validation_step_outputs.items():
-            
             dataset = dm.val_datasets[dataloader_idx]
             dataset_name = dataset.dataset_name
 
@@ -549,8 +526,8 @@ class InstanceFramework(pl.LightningModule):
                     self.print("\n[Sanity Check] Skipping expensive recall computation.\n")
                 continue
             
-            local_descriptors = torch.cat(outputs['descriptors'], dim=0)  # (num_local, D)
-            local_indices = torch.cat(outputs['indices'], dim=0)          # (num_local,)
+            local_descriptors = torch.cat(outputs['descriptors'], dim=0)
+            local_indices = torch.cat(outputs['indices'], dim=0)
 
             sorted_descriptors, sorted_indices = self._gather_distributed_data(
                 local_descriptors, local_indices
@@ -558,7 +535,6 @@ class InstanceFramework(pl.LightningModule):
             metrics = {}
             
             if self.trainer.is_global_zero:
-                # 跳过 Fast Dev Run (冒烟测试)
                 if "gl3d" in dataset_name.lower():
                     k_values = [1, 25, 50, 100]
                     filter_keys = ["CMC"]
@@ -600,10 +576,6 @@ class InstanceFramework(pl.LightningModule):
                 self.log_dict(log_metrics, prog_bar=False, logger=True, sync_dist=False)
 
         self.validation_step_outputs.clear()
-
-        ##############################
-        ### Visualization aux maps ###
-        ##############################
         if self.global_rank != 0 or not getattr(self, "val_aux_samples", None):
             return
 

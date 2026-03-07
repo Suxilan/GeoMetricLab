@@ -1,4 +1,47 @@
-# GeoEncoder Model Architecture
+# Models Module
+
+This module contains the core model implementations behind GeoMetricLab.
+
+## Scope
+
+- `GeoEncoder` as the main backbone-plus-aggregator abstraction
+- Backbone wrappers for CNN and ViT-based feature extraction
+- Aggregators that convert local features or tokens into compact global descriptors
+- Supporting modules required by the public model stack
+
+## Architecture overview
+
+GeoMetricLab models are organized around a simple composition pattern:
+
+1. A backbone extracts spatial or token-level representations from an image
+2. An aggregator turns those representations into a global descriptor
+3. The top-level encoder normalizes and exposes a consistent retrieval embedding interface
+
+## Main components
+
+- `geoencoder.py`: public model entrypoint used by training and evaluation scripts
+- `backbone/`: CNN and transformer backbone wrappers
+- `aggregator/`: maintained retrieval aggregation heads
+- `modules/`: shared internal layers used by the model stack
+
+## Maintained public aggregators
+
+- Avg
+- CLS
+- GeM
+- BoQ
+- CosPlace
+- EigenPlace
+- NetVLAD
+- GhostVLAD
+- SuperVLAD
+- SALAD
+- CricaVPR
+
+## Notes
+
+- Third-party method provenance is recorded in the corresponding source files
+- This README intentionally focuses on maintained public model surfaces# GeoEncoder Model Architecture
 
 This directory contains the implementation of the **GeoEncoder**, a modular feature extraction framework designed for Visual Geo-localization and Image Retrieval tasks.
 

@@ -38,6 +38,7 @@ results/
 !/config/default.yml
 !/config/**/default.yaml
 !/config/**/default.yml
+/config/train_uca_u1652/**
 
 # Only keep eval_gl3d and eval_university1652 in scripts
 /scripts/*
@@ -46,6 +47,9 @@ results/
 
 # Ignore model rerankers
 /src/models/reranker/**
+
+# Hide deprecated UCA entrypoint from public tracking
+/engine/train_uca_u1652_engine.py
 
 # Keep only selected aggregators
 /src/models/aggregator/*.py

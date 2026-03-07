@@ -2,7 +2,29 @@
 	<img src="assets/GeoMetricLab.png" alt="GeoMetricLab banner" width="100%" />
 </p>
 
-# GeoMetricLab
+<h1 align="center">GeoMetricLab</h1>
+
+<p align="center">
+	<a href="https://www.python.org/">
+		<img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+" />
+	</a>
+	<a href="https://pytorch.org/">
+		<img src="https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch" />
+	</a>
+	<a href="https://lightning.ai/">
+		<img src="https://img.shields.io/badge/Lightning-Training%20Framework-792EE5?logo=lightning&logoColor=white" alt="Lightning" />
+	</a>
+	<a href="https://github.com/facebookresearch/dinov2">
+		<img src="https://img.shields.io/badge/VFM-DINOv2%20%7C%20DINOv3-0A66C2" alt="Vision Foundation Models" />
+	</a>
+	<a href="dock/README.md">
+		<img src="https://img.shields.io/badge/Project%20Guide-dock%2F-1F6FEB" alt="Project Guide" />
+	</a>
+</p>
+
+<p align="center"><strong>Unified Geo-Localization, VPR, and Retrieval Research Toolbox</strong></p>
+
+<p align="center">Composable GeoEncoder pipelines for backbone exploration, descriptor aggregation, metric learning, evaluation, and reproducible geometric retrieval experiments.</p>
 
 GeoMetricLab is a research-oriented toolbox for visual geo-localization, visual place recognition (VPR), and image retrieval. It centers on a unified `GeoEncoder` abstraction that composes modern CNN / ViT backbones with retrieval-oriented aggregation heads, making it easy to train, evaluate, and compare geometry-aware global descriptors in a single codebase.
 

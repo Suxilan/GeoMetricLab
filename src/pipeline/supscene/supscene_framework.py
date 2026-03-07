@@ -171,40 +171,18 @@ class SupSceneFramework(pl.LightningModule):
         base_lr = float(self.optimizer_cfg.get("lr", 1e-4))
         base_wd = float(self.optimizer_cfg.get("weight_decay", 1e-4))
         param_groups = self._build_optimizer_param_groups(base_lr=base_lr, base_wd=base_wd)
+        optimizer_name = self.optimizer_cfg.get("name", "").lower()
 
-        if self.optimizer_cfg.get("name", "").lower() == "adamw":
-            optimizer = torch.optim.AdamW(
-                param_groups,
-            )
-        elif self.optimizer_cfg.get("name", "").lower() == "sgd":
-            optimizer = torch.optim.SGD(
-                param_groups,
-                momentum=self.optimizer_cfg.get("momentum", 0.9)
-            )
+        if optimizer_name == "adamw":
+            optimizer = torch.optim.AdamW(param_groups)
+        elif optimizer_name == "sgd":
+            optimizer = torch.optim.SGD(param_groups, momentum=self.optimizer_cfg.get("momentum", 0.9))
         else:
             raise ValueError(f"Unsupported optimizer: {self.optimizer_cfg.get('name', '')}")
         
         warmup_start = float(self.scheduler_cfg.get("warmup_start_factor", 0.01))
         warmup_ratio = float(self.scheduler_cfg.get("warmup_ratio", 0.0))
-
-        # IMPORTANT: interval="step" => scheduler params must be in steps, not epochs.
-        try:
-            total_steps = self.trainer.estimated_stepping_batches
-        except Exception:
-            total_steps = 0
-
-        if total_steps == float("inf") or total_steps <= 0:
-            # Fallback to manual computation if estimated_stepping_batches is unavailable
-            max_epochs = getattr(self.trainer, "max_epochs", 30)
-            try:
-                # Attempt to get dataloader length
-                dl = self.trainer.datamodule.train_dataloader()
-                batches_per_epoch = len(dl)
-                total_steps = int(max_epochs * batches_per_epoch)
-            except Exception:
-                # Absolute fallback if dataloader cannot be resolved
-                total_steps = max_epochs * 1000
-
+        total_steps = int(self.trainer.estimated_stepping_batches)
         warmup_steps = int(total_steps * warmup_ratio)
         cosine_steps = max(total_steps - warmup_steps, 1)
 

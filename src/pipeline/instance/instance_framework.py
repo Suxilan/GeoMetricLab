@@ -167,32 +167,20 @@ class InstanceFramework(pl.LightningModule):
         base_lr = float(self.optimizer_cfg.get("lr", 1e-4))
         base_wd = float(self.optimizer_cfg.get("weight_decay", 1e-4))
         param_groups = self._build_optimizer_param_groups(base_lr=base_lr, base_wd=base_wd)
+        optimizer_name = self.optimizer_cfg.get("name", "").lower()
 
-        if self.optimizer_cfg.get("name", "").lower() == "adamw":
-            optimizer = torch.optim.AdamW(
-                param_groups,
-            )
-        elif self.optimizer_cfg.get("name", "").lower() == "sgd":
-            optimizer = torch.optim.SGD(
-                param_groups,
-                momentum=self.optimizer_cfg.get("momentum", 0.9)
-            )
+        if optimizer_name == "adamw":
+            optimizer = torch.optim.AdamW(param_groups)
+        elif optimizer_name == "sgd":
+            optimizer = torch.optim.SGD(param_groups, momentum=self.optimizer_cfg.get("momentum", 0.9))
         else:
             raise ValueError(f"Unsupported optimizer: {self.optimizer_cfg.get('name', '')}")
         
         warmup_start = float(self.scheduler_cfg.get("warmup_start_factor", 0.01))
         warmup_ratio = float(self.scheduler_cfg.get("warmup_ratio", 0.0))
-
-        # IMPORTANT: interval="step" => scheduler params must be in steps, not epochs.
-        total_steps = int(getattr(self.trainer, "estimated_stepping_batches", 0) or 0)
-        if total_steps <= 0:
-            # Fallback (rare), keep previous epoch-based behavior as last resort.
-            max_epochs = int(self.trainer.max_epochs)
-            warmup_steps = int(max_epochs * warmup_ratio)
-            cosine_steps = max(max_epochs - warmup_steps, 1)
-        else:
-            warmup_steps = int(total_steps * warmup_ratio)
-            cosine_steps = max(total_steps - warmup_steps, 1)
+        total_steps = int(self.trainer.estimated_stepping_batches)
+        warmup_steps = int(total_steps * warmup_ratio)
+        cosine_steps = max(total_steps - warmup_steps, 1)
 
         if warmup_steps > 0:
             scheduler1 = torch.optim.lr_scheduler.LinearLR(
@@ -217,7 +205,7 @@ class InstanceFramework(pl.LightningModule):
                 T_max=cosine_steps,
                 eta_min=1e-7,
             )
-        
+
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
     
     # @torch.compiler.disable()
@@ -455,27 +443,6 @@ class InstanceFramework(pl.LightningModule):
             self.log("train/discard_rate", discard_rate, prog_bar=True, on_step=True, on_epoch=True, batch_size=images.size(0), sync_dist=True)
         return loss
 
-    def on_train_batch_end(self, outputs, batch, batch_idx: int) -> None:
-        """Log LR of each optimizer param-group at step granularity."""
-        opt = self.optimizers(use_pl_optimizer=False)
-        if isinstance(opt, (list, tuple)):
-            if len(opt) == 0:
-                return
-            opt = opt[0]
-
-        group_names = getattr(self, "_lr_group_names", [])
-        for i, pg in enumerate(opt.param_groups):
-            name = group_names[i] if i < len(group_names) else f"group{i}"
-            self.log(
-                f"lr/{name}",
-                float(pg.get("lr", 0.0)),
-                prog_bar=(name in ["backbone", "aggregator"]),
-                on_step=True,
-                on_epoch=False,
-                logger=True,
-                sync_dist=False,
-            )
-    
     def on_train_epoch_end(self):
         """
         Actions to perform at the end of each training epoch.

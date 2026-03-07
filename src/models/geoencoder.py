@@ -15,7 +15,6 @@ from .aggregator import (
     SCPP,
     CricaVPR,
 )
-from .modules import GCE
 from src.utils.logger import print_rank_0
 
 class GeoEncoder(nn.Module):

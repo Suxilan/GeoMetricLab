@@ -1,4 +1,19 @@
-# Code adapted from Lu-Feng/SuperVLAD: https://github.com/Lu-Feng/SuperVLAD
+"""
+    SuperVLAD: Compact and Robust Image Descriptors for Visual Place Recognition
+
+    Paper: https://proceedings.neurips.cc/paper_files/paper/2024/hash/0b135d408253205ba501d55c6539bfc7-Abstract-Conference.html
+    Code repo: https://github.com/Lu-Feng/SuperVLAD
+
+    Reference:
+    @inproceedings{lu2024supervlad,
+        title={SuperVLAD: Compact and Robust Image Descriptors for Visual Place Recognition},
+        author={Lu, Feng and Zhang, Xinyao and Ye, Canming and Dong, Shuting and Zhang, Lijun and Lan, Xiangyuan and Yuan, Chun},
+        booktitle={Advances in Neural Information Processing Systems},
+        volume={37},
+        pages={5789--5816},
+        year={2024}
+    }
+"""
 
 import torch
 import torch.nn as nn
@@ -10,6 +25,8 @@ from .base import AggregatorBase
 from ..modules import DPN, SoftP
 
 
+# Code adapted from SuperVLAD, MIT license
+# https://github.com/Lu-Feng/SuperVLAD/blob/main/model/supervlad_layer.py
 class SuperVLAD(AggregatorBase):
     """SuperVLAD Aggregator (follow the official SuperVLAD repo logic).
 

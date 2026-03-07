@@ -1,4 +1,19 @@
-# Code adapted from gmberton/CosPlace: https://github.com/gmberton/CosPlace
+"""
+    Rethinking Visual Geo-Localization for Large-Scale Applications
+
+    Paper: https://arxiv.org/abs/2204.02287
+    Code repo: https://github.com/gmberton/CosPlace
+
+    Reference:
+    @InProceedings{Berton_CVPR_2022_CosPlace,
+        author    = {Berton, Gabriele and Masone, Carlo and Caputo, Barbara},
+        title     = {Rethinking Visual Geo-Localization for Large-Scale Applications},
+        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+        month     = {June},
+        year      = {2022},
+        pages     = {4878-4888}
+    }
+"""
 
 import torch
 import torch.nn as nn
@@ -7,6 +22,8 @@ from typing import Tuple, Optional, Any
 from .base import AggregatorBase
 from .gem import GeM
 
+# Code adapted from CosPlace, MIT license
+# https://github.com/gmberton/CosPlace/blob/main/cosplace_model/cosplace_network.py
 class CosPlace(AggregatorBase):
     """CosPlace Aggregator.
     

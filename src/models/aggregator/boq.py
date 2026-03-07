@@ -1,10 +1,27 @@
-# Code adapted from amaralibey/Bag-of-Queries: https://github.com/amaralibey/Bag-of-Queries
+"""
+    BoQ: A Place is Worth a Bag of Learnable Queries
+
+    Paper: https://arxiv.org/abs/2405.07364
+    Code repo: https://github.com/amaralibey/Bag-of-Queries
+
+    Reference:
+    @InProceedings{Ali-bey_2024_CVPR,
+        author    = {Ali-bey, Amar and Chaib-draa, Brahim and Gigu\`ere, Philippe},
+        title     = {{BoQ}: A Place is Worth a Bag of Learnable Queries},
+        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+        month     = {June},
+        year      = {2024},
+        pages     = {17794-17803}
+    }
+"""
 
 import torch
 import torch.nn as nn
 from typing import Tuple, Optional, Any, Dict
 from .base import AggregatorBase
 
+# Code adapted from Bag-of-Queries, MIT license
+# https://github.com/amaralibey/Bag-of-Queries/blob/main/src/boq.py
 class BoQBlock(torch.nn.Module):
     def __init__(self, in_dim, num_queries, nheads=8):
         super(BoQBlock, self).__init__()
@@ -37,6 +54,8 @@ class BoQBlock(torch.nn.Module):
         out = self.norm_out(out)
         return x, out, attn.detach()
 
+    # Code adapted from Bag-of-Queries, MIT license
+    # https://github.com/amaralibey/Bag-of-Queries/blob/main/src/boq.py
 class BoQ(AggregatorBase):
     def __init__(self, in_channels=1024, proj_channels=512, num_queries=32, num_layers=2, row_dim=32):
         super().__init__()

@@ -23,6 +23,7 @@ weights/
 tests/
 cache/
 results/
+vis/
 
 # Ignore third_party contents entirely (they should be submodules)
 /third_party/

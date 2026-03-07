@@ -1,5 +1,14 @@
-# Code adapted from Nanne/pytorch-NetVlad: https://github.com/Nanne/pytorch-NetVlad
-# NetVLAD method reference: https://github.com/Relja/netvlad
+"""
+    NetVLAD: CNN Architecture for Weakly Supervised Place Recognition
+
+    Paper: https://arxiv.org/abs/1511.07247
+    Code repo: https://github.com/Relja/netvlad
+
+    Reference:
+    [1] R. Arandjelovic, P. Gronat, A. Torii, T. Pajdla, J. Sivic.
+        NetVLAD: CNN Architecture for Weakly Supervised Place Recognition.
+        CoRR, abs/1511.07247, 2015.
+"""
 
 import faiss
 import torch
@@ -11,6 +20,8 @@ from typing import Tuple, Optional, Any, Dict
 from .base import AggregatorBase
 from ..modules import DPN, SoftP
 
+# Code adapted from pytorch-NetVlad, repository license not specified
+# https://github.com/Nanne/pytorch-NetVlad/blob/main/netvlad.py
 class NetVLAD(AggregatorBase):
     """NetVLAD Aggregator.
     

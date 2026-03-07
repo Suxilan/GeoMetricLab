@@ -1,4 +1,18 @@
-# Code adapted from Lu-Feng/CricaVPR: https://github.com/Lu-Feng/CricaVPR
+"""
+    CricaVPR: Cross-image Correlation-aware Representation Learning for Visual Place Recognition
+
+    Paper: https://arxiv.org/abs/2402.19231
+    Code repo: https://github.com/Lu-Feng/CricaVPR
+
+    Reference:
+    @inproceedings{lu2024cricavpr,
+        title={CricaVPR: Cross-image Correlation-aware Representation Learning for Visual Place Recognition},
+        author={Lu, Feng and Lan, Xiangyuan and Zhang, Lijun and Jiang, Dongmei and Wang, Yaowei and Yuan, Chun},
+        booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+        month={June},
+        year={2024}
+    }
+"""
 
 import math
 from typing import Any, Dict, List, Optional, Tuple
@@ -10,6 +24,8 @@ import torch.nn.functional as F
 from .base import AggregatorBase
 
 
+# Code adapted from CricaVPR, MIT license
+# https://github.com/Lu-Feng/CricaVPR/blob/main/network.py
 class CricaVPR(AggregatorBase):
     """CricaVPR-style aggregator.
 

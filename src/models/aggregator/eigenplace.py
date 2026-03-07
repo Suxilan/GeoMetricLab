@@ -1,4 +1,19 @@
-# Code adapted from gmberton/EigenPlaces: https://github.com/gmberton/EigenPlaces
+"""
+    EigenPlaces: Training Viewpoint Robust Models for Visual Place Recognition
+
+    Paper: https://arxiv.org/abs/2308.10832
+    Code repo: https://github.com/gmberton/EigenPlaces
+
+    Reference:
+    @inproceedings{Berton_2023_EigenPlaces,
+        title={EigenPlaces: Training Viewpoint Robust Models for Visual Place Recognition},
+        author={Berton, Gabriele and Trivigno, Gabriele and Caputo, Barbara and Masone, Carlo},
+        booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+        year={2023},
+        month={October},
+        pages={11080-11090}
+    }
+"""
 
 import torch
 import torch.nn as nn
@@ -9,6 +24,8 @@ from .base import AggregatorBase
 from .gem import GeM
 
 
+# Code adapted from EigenPlaces, MIT license
+# https://github.com/gmberton/EigenPlaces/blob/main/eigenplaces_model/eigenplaces_network.py
 class EigenPlace(AggregatorBase):
     """EigenPlace-style head: L2Norm -> GeM -> Linear.
 

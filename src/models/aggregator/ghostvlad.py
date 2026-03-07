@@ -1,4 +1,13 @@
-# Implementation inspired by keetsky/Net_ghostVLAD-pytorch: https://github.com/keetsky/Net_ghostVLAD-pytorch
+"""
+    GhostVLAD
+
+    Method note: this implementation follows the public GhostVLAD-style PyTorch demo.
+    Code repo: https://github.com/keetsky/Net_ghostVLAD-pytorch
+
+    Reference:
+    GhostVLAD extends VLAD-style residual aggregation with ghost clusters that
+    absorb uninformative local descriptors before global pooling.
+"""
 
 import torch
 import torch.nn as nn
@@ -9,6 +18,8 @@ from typing import Tuple, Any, Dict, Optional
 from .base import AggregatorBase
 
 
+# Code adapted from Net_ghostVLAD-pytorch, MIT license
+# https://github.com/keetsky/Net_ghostVLAD-pytorch/blob/master/gostVALD.py
 class GhostVLAD(AggregatorBase):
     """GhostVLAD Aggregator.
 

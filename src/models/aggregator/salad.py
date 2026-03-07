@@ -1,8 +1,23 @@
+"""
+    Optimal Transport Aggregation for Visual Place Recognition
+
+    Paper: https://arxiv.org/abs/2311.15937
+    Code repo: https://github.com/serizba/salad
+
+    Reference:
+    @InProceedings{Izquierdo_CVPR_2024_SALAD,
+        author    = {Izquierdo, Sergio and Civera, Javier},
+        title     = {Optimal Transport Aggregation for Visual Place Recognition},
+        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+        month     = {June},
+        year      = {2024},
+    }
+"""
+
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ..modules import GCE
 
 # Code adapted from OpenGlue, MIT license
 # https://github.com/ucuapps/OpenGlue/blob/main/models/superglue/optimal_transport.py
@@ -78,8 +93,6 @@ class Salad(AggregatorBase):
         cluster_dim: int = 128,
         token_dim: int = 256,
         dropout: float = 0.3,
-        use_gce: bool = False,
-        gce_args: Optional[Dict[str, Any]] = None,
     ):
         super().__init__()
         self.num_channels = num_channels
@@ -87,14 +100,7 @@ class Salad(AggregatorBase):
         self.cluster_dim = cluster_dim
         self.token_dim = token_dim
         self.out_channels = num_clusters * cluster_dim + token_dim
-        self.use_gce = bool(use_gce)
 
-        if self.out_channels % self.cluster_dim != 0:
-            raise ValueError(
-                f"SALAD output dim ({self.out_channels}) must be divisible by cluster_dim ({self.cluster_dim}) for GCE reshaping."
-            )
-        self.num_tokens = self.out_channels // self.cluster_dim
-        
         if dropout > 0:
             dropout_layer = nn.Dropout(dropout)
         else:
@@ -118,10 +124,6 @@ class Salad(AggregatorBase):
             nn.Conv2d(512, self.num_clusters, 1),
         )
         self.dust_bin = nn.Parameter(torch.tensor(1.))
-
-        self.gce = None
-        if self.use_gce:
-            self.gce = GCE(dim=self.cluster_dim, **(gce_args or {}))
 
     def forward(self, x: torch.Tensor, cls_token: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, Dict[str, Any]]:
         """Forward pass.
@@ -165,18 +167,6 @@ class Salad(AggregatorBase):
             F.normalize(t, p=2, dim=-1),
             F.normalize((f * p).sum(dim=-1), p=2, dim=1).flatten(1)
         ], dim=-1)
-
-        if self.use_gce and self.gce is not None:
-            # e.g. default SALAD: (B, 8448) -> (B, 66, 128)
-            f_tokens = f.view(B, self.num_tokens, self.cluster_dim)
-            gce_attn_mask = None
-            if not self.training:
-                # for validation / inference: only allow each sample to attend to itself
-                # MultiheadAttention bool mask: True = masked, False = keep.
-                gce_attn_mask = ~torch.eye(B, dtype=torch.bool, device=f.device)
-            # GCE内部包含两层跨batch attention
-            f_tokens = self.gce(f_tokens, attn_mask=gce_attn_mask)
-            f = f_tokens.reshape(B, -1)
         
         return f, {
             "assign_map": assign_map,

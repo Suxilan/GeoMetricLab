@@ -2,7 +2,7 @@
 	<img src="assets/GeoMetricLab.png" alt="GeoMetricLab banner" width="100%" />
 </p>
 
-<h1 align="center">GeoMetricLab</h1>
+<h1 align="center">GeoMetricLab-Geometry Metric Learning</h1>
 
 <p align="center">
 	<a href="https://www.python.org/">
@@ -17,8 +17,8 @@
 	<a href="https://github.com/facebookresearch/dinov2">
 		<img src="https://img.shields.io/badge/VFM-DINOv2%20%7C%20DINOv3-0A66C2" alt="Vision Foundation Models" />
 	</a>
-	<a href="dock/README.md">
-		<img src="https://img.shields.io/badge/Project%20Guide-dock%2F-1F6FEB" alt="Project Guide" />
+		<a href="https://github.com/KevinMusgrave/pytorch-metric-learning">
+		<img src="https://img.shields.io/badge/PyTorch%20Metric%20Learning-PML-2EA44F?logo=github" alt="PyTorch Metric Learning" />
 	</a>
 </p>
 

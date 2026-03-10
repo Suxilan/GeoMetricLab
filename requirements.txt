@@ -1,0 +1,32 @@
+# Install a CUDA-specific PyTorch build manually if needed before `pip install -e .`.
+# Replace `faiss-cpu` with a GPU-enabled FAISS build if your environment provides one.
+
+# Core deep learning stack
+torch>=2.0
+torchvision>=0.15
+pytorch-lightning>=2.0
+
+# Retrieval and metric learning
+pytorch-metric-learning>=2.3
+faiss-cpu>=1.7
+
+# Model backbones and adaptation
+timm>=0.9
+peft>=0.10
+
+# Logging and configuration
+wandb>=0.16
+PyYAML>=6.0
+rich>=13.0
+tqdm>=4.66
+
+# Numerical and data IO
+numpy>=1.24
+Pillow>=9.0
+h5py>=3.8
+
+# Visualization and analysis
+matplotlib>=3.7
+opencv-python>=4.8
+scikit-image>=0.21
+umap-learn>=0.5

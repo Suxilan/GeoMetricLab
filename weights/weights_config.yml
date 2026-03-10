@@ -1,0 +1,369 @@
+swinv2_gem_instance_u1652_pretrain:
+  model_cfg:
+    backbone: swin_v2b
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: false
+  weight_path: weights/swinv2_gem_instance_u1652_pretrain.pth
+
+swinv2_gem_whiten_instance_u1652_pretrain:
+  model_cfg:
+    backbone: swin_v2b
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: true
+    whitening_dim: 512
+  weight_path: weights/swinv2_gem_whiten_instance_u1652_pretrain.pth
+
+convnext_gem_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov3_convnext_base
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: false
+  weight_path: weights/convnext_gem_instance_u1652_pretrain.pth
+
+convnext_gem_whiten_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov3_convnext_base
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: true
+    whitening_dim: 512
+  weight_path: weights/convnext_gem_whiten_instance_u1652_pretrain.pth
+
+dinov3_gem_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov3_vitb16
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: false
+  weight_path: weights/dinov3_gem_instance_u1652_pretrain.pth
+
+dinov3_gem_whiten_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov3_vitb16
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: true
+    whitening_dim: 512
+  weight_path: weights/dinov3_gem_whiten_instance_u1652_pretrain.pth
+
+dinov3_cls_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov3_vitb16
+    aggregator: cls
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: false
+  weight_path: weights/dinov3_cls_instance_u1652_pretrain.pth
+
+dinov3_cls_whiten_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov3_vitb16
+    aggregator: cls
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: true
+    whitening_dim: 512
+  weight_path: weights/dinov3_cls_whiten_instance_u1652_pretrain.pth
+
+dinov2_reg_cls_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14_reg
+    aggregator: cls
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: false
+  weight_path: weights/dinov2_reg_cls_instance_u1652_pretrain.pth
+
+dinov2_reg_cls_whiten_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14_reg
+    aggregator: cls
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: true
+    whitening_dim: 512
+  weight_path: weights/dinov2_reg_cls_whiten_instance_u1652_pretrain.pth
+
+dinov2_reg_gem_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14_reg
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: false
+  weight_path: weights/dinov2_reg_gem_instance_u1652_pretrain.pth
+
+dinov2_reg_gem_whiten_instance_u1652_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14_reg
+    aggregator: gem
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args: {}
+    whitening: true
+    whitening_dim: 512
+  weight_path: weights/dinov2_reg_gem_whiten_instance_u1652_pretrain.pth
+
+# ==============================================================================
+# SupScene GL3D pre-trained weights
+# ==============================================================================
+dinov2_ghostvlad_gl3d_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14
+    aggregator: ghostvlad
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args:
+      num_clusters: 32
+    whitening: false
+  weight_path: weights/dinov2_ghostvlad_gl3d_pretrain.pth
+
+dinov2_salad_gl3d_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14
+    aggregator: salad
+    backbone_args:
+      num_unfrozen_blocks: 1
+    aggregator_args:
+      num_clusters: 64
+      cluster_dim: 128
+      token_dim: 256
+    whitening: false
+  weight_path: weights/dinov2_salad_gl3d_pretrain.pth
+
+dinov2_reg_cls_whiten_supscene_gl3d_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14_reg
+    aggregator: cls
+    backbone_args:
+      num_unfrozen_blocks: 4
+    aggregator_args: {}
+    whitening: true
+    whitening_dim: 768
+  weight_path: weights/dinov2_reg_cls_whiten_supscene_gl3d_pretrain.pth
+
+dinov2_reg_cls_supscene_gl3d_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14_reg
+    aggregator: cls
+    backbone_args:
+      num_unfrozen_blocks: 4
+    aggregator_args: {}
+  weight_path: weights/dinov2_reg_cls_supscene_gl3d_pretrain.pth
+
+dinov2_cls_supscene_gl3d_pretrain:
+  model_cfg:
+    backbone: dinov2_vitb14
+    aggregator: cls
+    backbone_args:
+      num_unfrozen_blocks: 4
+    aggregator_args: {}
+  weight_path: weights/dinov2_cls_supscene_gl3d_pretrain.pth
+
+peft_dinov2_salad_gl3d_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: salad
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    aggregator_args: {
+      num_clusters: 64
+    }
+    whitening: false
+  weight_path: weights/peft_dinov2_salad_gl3d_pretrain.pth
+
+peft_dinov2_avg_gl3d_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: avg
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: false
+  weight_path: weights/peft_dinov2_avg_gl3d_pretrain.pth
+
+peft_dinov2_avg_gl3d_instance_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: avg
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: false
+  weight_path: weights/peft_dinov2_avg_gl3d_instance_pretrain.pth
+
+peft_dinov2_gl3d_supscene_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: avg
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: false
+  weight_path: weights/peft_dinov2_gl3d_supscene_pretrain.pth
+
+peft_dinov2_cls_gl3d_supscene_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: cls
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: false
+  weight_path: weights/peft_dinov2_cls_gl3d_supscene_pretrain.pth
+
+peft_dinov2_reg_avgcls_gl3d_supscene_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14_reg
+    aggregator: cls
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: false
+  weight_path: weights/peft_dinov2_reg_avgcls_gl3d_supscene_pretrain.pth
+
+peft_dinov2_scpp_gl3d_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: scpp
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: false
+  weight_path: weights/peft_dinov2_scpp_gl3d_pretrain.pth
+
+peft_dinov2_scpp_whiten768_gl3d_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: scpp
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: true
+    whitening_dim: 768
+  weight_path: weights/peft_dinov2_scpp_whiten768_gl3d_pretrain.pth
+
+peft_dinov2_scpp_whiten1536_gl3d_pretrain:
+  model_cfg:
+    backbone: peft_dinov2_vitb14
+    aggregator: scpp
+    backbone_args: {
+      num_unfrozen_blocks: 12,
+      lora_r: 16,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_bias: none,
+      lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2],
+    }
+    whitening: true
+    whitening_dim: 1536
+  weight_path: weights/peft_dinov2_scpp_whiten1536_gl3d_pretrain.pth
+# ==============================================================================
+# On the shelf Pre-trained weights for various backbones and aggregators
+# ==============================================================================
+ResNet50_512_cosplace:
+  model_cfg:
+    backbone: resnet50
+    aggregator: cosplace
+    backbone_args:
+      crop_last_block: false
+    aggregator_args:
+      out_channels: 512
+  weight_path: weights/ResNet50_512_cosplace.pth
+
+dino_salad:
+  model_cfg:
+    backbone: dinov2_vitb14
+    aggregator: salad
+    backbone_args: {}
+    aggregator_args:
+      num_clusters: 64
+      cluster_dim: 128
+      token_dim: 256
+  weight_path: weights/dino_salad.ckpt
+
+resnet50_boq_16384:
+  model_cfg:
+    backbone: resnet50
+    aggregator: boq
+    backbone_args:
+      crop_last_block: true
+    aggregator_args:
+      proj_channels: 512
+      num_queries: 64
+      num_layers: 2
+      row_dim: 32
+  weight_path: weights/resnet50_boq_16384.pth
+
+dinov2_boq_12288:
+  model_cfg:
+    backbone: dinov2_vitb14
+    aggregator: boq
+    backbone_args: {}
+    aggregator_args:
+      proj_channels: 384
+      num_queries: 64
+      num_layers: 2
+      row_dim: 32
+  weight_path: weights/dinov2_boq_12288.pth

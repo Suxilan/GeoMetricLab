@@ -5,6 +5,7 @@ __pycache__/
 *.pyd
 *.pth
 *.ckpt
+!notebooks/visualize_generic_retrieval.ipynb
 .Python
 env/
 venv/
@@ -46,6 +47,7 @@ results/
 !/scripts/eval_gl3d.py
 !/scripts/eval_university1652.py
 !/scripts/extract_features.py
+!/scripts/build_sfm_pairs.py
 # Ignore model rerankers
 /src/models/reranker/**
 

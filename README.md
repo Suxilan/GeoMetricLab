@@ -2,7 +2,7 @@
 	<img src="assets/GeoMetricLab.png" alt="GeoMetricLab banner" width="100%" />
 </p>
 
-<h1 align="center">GeoMetricLab-Geometry Metric Learning</h1>
+<h1 align="center">GeoMetricLab-Geometry/Geography Metric Learning</h1>
 
 <p align="center">
 	<a href="https://www.python.org/">

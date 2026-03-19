@@ -20,6 +20,9 @@
 		<a href="https://github.com/KevinMusgrave/pytorch-metric-learning">
 		<img src="https://img.shields.io/badge/PyTorch%20Metric%20Learning-PML-2EA44F?logo=github" alt="PyTorch Metric Learning" />
 	</a>
+	<a href="https://github.com/Suxilan/GeoMetricLab/blob/main/LICENSE">
+		<img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License" />
+	</a>
 </p>
 
 <p align="center"><strong>Unified Geo-Localization, VPR, and Retrieval Research Toolbox</strong></p>

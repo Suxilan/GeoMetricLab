@@ -1,0 +1,10 @@
+# Selection only: paths are relative to this YAML file. Preview before --fit.
+# No merged H5 is created. Add another dataset by adding its completed record.
+features:
+  - record: ../../results/extraction/gl3d_raw.json
+  - record: ../../results/extraction/u1652_raw.json
+
+whitening:
+  dimension: 768
+  eps: 0.0001
+  chunk_rows: 256

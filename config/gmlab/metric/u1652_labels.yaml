@@ -1,0 +1,114 @@
+# Public label-learning example. Set dataset paths before running.
+# This is an explicit example, not a task base or an accuracy reproduction.
+extends: base.yaml
+model:
+  type: GeoEncoder
+  backbone:
+    type: ResNet
+    backbone_name: resnet18
+    pretrained: false
+    crop_last_block: false
+  aggregator:
+    type: GeM
+  use_bn: true
+  final_norm: true
+loss:
+  type: GeoMetricLoss
+  primary_objective:
+    type: MetricObjective
+    distributed: false
+optimizer:
+  type: Adam
+  lr: 0.0001
+scheduler:
+  type: StepLR
+  step_size: 1
+  gamma: 0.7
+  interval: epoch
+data:
+  train:
+    transform: image
+    dataset:
+      type: datasets.train.u1652.University1652InstanceDataset
+      dataset_path: data/university1652/train
+      views:
+      - satellite
+      - drone
+      sampler:
+        type: ModalityQuotaSampler
+        quotas:
+          satellite: 1
+          drone: 1
+        replacement: true
+        missing: skip
+    loader:
+      batch_size: 4
+      num_workers: 0
+      shuffle: false
+      collate_fn: stack_samples
+  valid:
+    transform: image
+    dataset:
+      type: datasets.valid.u1652.u1652_retrieval
+      metadata_path: data/university1652/validation
+      split: validation
+    loader:
+      batch_size: 4
+      num_workers: 0
+  test:
+    transform: image
+    dataset:
+      type: datasets.valid.u1652.u1652_retrieval
+      metadata_path: data/university1652/test
+      split: test
+    loader:
+      batch_size: 8
+      num_workers: 0
+  transforms:
+    image:
+      size:
+      - 224
+      - 224
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+evaluation:
+  k_values:
+  - 1
+  - 5
+  - 10
+  metric: cosine
+  full_ranking: true
+runtime:
+  seed: 81
+  run_dir: results/gmlab/u1652_labels
+  trainer:
+    accelerator: auto
+    devices: 1
+    max_epochs: 20
+    check_val_every_n_epoch: 2
+    num_sanity_val_steps: 2
+    log_every_n_steps: 1
+    precision: bf16-mixed
+  checkpoint:
+    monitor: val/mAP
+    mode: max
+    save_last: true
+    save_top_k: 1
+  logging:
+    tracking:
+      mode: offline
+      project: GeoMetricLab
+      logdir: results/gmlab/u1652_labels/swanlab
+    summary: true
+    text_level: INFO
+  test_weights: best
+  evaluation_trainer:
+    accelerator: cpu
+    devices: 1
+  save_rng: true

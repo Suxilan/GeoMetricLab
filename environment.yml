@@ -1,0 +1,18 @@
+# Linux/NVIDIA reference environment. Run `make conda-env` from the repository root.
+name: GeoMetricLab
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.12
+  - pip
+  - numpy=2.2.6
+  - libstdcxx>=13
+  # CUDA 13.2 FAISS requires a compatible NVIDIA driver.
+  - faiss-gpu=1.15.1=py3.12_hc84be16_0_cuda13.2
+  - pip:
+      - -r requirements.txt
+variables:
+  PYTHONNOUSERSITE: "1"

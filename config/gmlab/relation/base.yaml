@@ -1,0 +1,14 @@
+# Public relation-supervision template. See README.md for GT/collate requirements.
+extends: ../metric/base.yaml
+pipeline:
+  supervision: relations
+
+data:
+  train:
+    loader:
+      # Required: a collator declaring batch_format: subgraphs (e.g. PadSubgraphs).
+      # Thresholds, known/unknown masks and identity rules belong to the dataset.
+      collate_fn: null
+
+# Configure a compatible MetricObjective inside GeoMetricLoss in the experiment.
+# Never turn a non-transitive relation graph into artificial class labels.

@@ -1,0 +1,36 @@
+# Public joint-training template. See README.md for source contracts and scheduling.
+extends: ../runtime.yaml
+pipeline:
+  type: MultiDatasetPipeline
+  # Task routing is composed, not copied into a second training implementation.
+  task:
+    type: GeoPipeline
+    supervision: labels
+    training_output: descriptor
+    retrieval_output: null
+  mixing:
+    policy: interleave
+    # null consumes every source's available batches once per epoch.
+    # Or name EVERY source with a positive batch cap, e.g. {a: 100, b: 50}.
+    # Caps must not exceed loader lengths. This never cycles or duplicates data.
+    steps_per_source: null
+
+model: null
+optimizer: null
+# Supply either a global loss or a loss for each source; no objective is inferred.
+data:
+  train:
+    # Required: >=2 named sources, each declaring dataset and loader.
+    # Each may override task options through its pipeline mapping.
+    sources: null
+
+runtime:
+  trainer:
+    accelerator: auto
+    devices: 1
+    precision: bf16-mixed
+    max_epochs: 20
+  checkpoint:
+    monitor: null
+    save_top_k: 0
+    save_last: true

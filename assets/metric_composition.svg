@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title description">
+  <title id="title">Dataset, modality and objective composition</title>
+  <desc id="description">Three panels show a multi-dataset multimodal metric-learning experiment. MultiDatasetPipeline interleaves source A and B, consuming one source batch per step. MultimodalPipeline routes RGB and thermal samples to their corresponding encoder and aggregation, head and BN modules, which may be shared or independent. Outputs retain sample order. A distinct dashed route supplies the selected source supervision and loss settings to GeoMetricLoss. The primary metric objective is required; the second metric objective and auxiliary objectives are optional. Lightning manages the shared model and optimizer, AMP, distributed execution and checkpoints. Dataset readers and modality names in this diagram are examples supplied by downstream users.</desc>
+  <defs>
+    <style>text { font-family: Arial, Helvetica, "DejaVu Sans", sans-serif; }</style>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L7 3.5 L0 7 Z" fill="#536575"/></marker>
+    <marker id="gt-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L7 3.5 L0 7 Z" fill="#00856b"/></marker>
+  </defs>
+  <rect width="1200" height="560" fill="#ffffff"/>
+  <text x="28" y="35" font-size="22" font-weight="bold" fill="#203047" text-anchor="start">(a)  Dataset mixing</text>
+  <text x="382" y="35" font-size="22" font-weight="bold" fill="#203047" text-anchor="start">(b)  Modality routing</text>
+  <text x="924" y="35" font-size="22" font-weight="bold" fill="#203047" text-anchor="start">(c)  Loss composition</text>
+  <path d="M352 112 V407" fill="none" stroke="#b8c2cc" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M890 112 V407" fill="none" stroke="#b8c2cc" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M255 205 V82 H1046 V143" fill="none" stroke="#00856b" stroke-width="1.7" stroke-linejoin="round" marker-end="url(#gt-arrow)" stroke-dasharray="6 5"/>
+  <rect x="470" y="65" width="435" height="30" rx="2" fill="white" stroke="none" stroke-width="1.4"/>
+  <text x="688" y="86" font-size="18" font-weight="normal" fill="#00856b" text-anchor="middle">Selected source&#x27;s GT and loss settings</text>
+  <rect x="28" y="145" width="124" height="67" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="90" y="172" font-size="20" font-weight="bold" fill="#203047" text-anchor="middle">Source A</text>
+  <text x="90" y="196" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">inputs · GT</text>
+  <rect x="28" y="275" width="124" height="67" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="90" y="302" font-size="20" font-weight="bold" fill="#203047" text-anchor="middle">Source B</text>
+  <text x="90" y="326" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">inputs · GT</text>
+  <path d="M152 179 H169 V232 H190" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <path d="M152 309 H169 V272 H190" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <rect x="190" y="205" width="130" height="88" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="255" y="232" font-size="20" font-weight="bold" fill="#203047" text-anchor="middle">Interleave</text>
+  <text x="255" y="257" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">one source</text>
+  <text x="255" y="279" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">batch per step</text>
+  <text x="184" y="387" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">MultiDatasetPipeline</text>
+  <path d="M320 249 H369" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <path d="M369 249 V210 H382 M369 249 V314 H382" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round"/>
+  <rect x="382" y="187" width="84" height="46" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="424" y="216" font-size="19" font-weight="normal" fill="#0072b2" text-anchor="middle">RGB</text>
+  <path d="M466 210 H492" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <rect x="492" y="187" width="111" height="46" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="547.5" y="216" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Encoder</text>
+  <path d="M603 210 H632" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <rect x="632" y="177" width="194" height="66" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="729" y="203" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Aggregation</text>
+  <text x="729" y="228" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Head / BN</text>
+  <rect x="382" y="291" width="84" height="46" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="424" y="320" font-size="19" font-weight="normal" fill="#0072b2" text-anchor="middle">Thermal</text>
+  <path d="M466 314 H492" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <rect x="492" y="291" width="111" height="46" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="547.5" y="320" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Encoder</text>
+  <path d="M603 314 H632" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <rect x="632" y="281" width="194" height="66" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="729" y="307" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Aggregation</text>
+  <text x="729" y="332" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Head / BN</text>
+  <path d="M826 210 H858 V262 M826 314 H858 V262" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round"/>
+  <circle cx="858" cy="262" r="3.4" fill="#536575"/>
+  <path d="M858 262 H924" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="618" y="365" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">Modules may be shared or independent.</text>
+  <text x="618" y="393" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">MultimodalPipeline</text>
+  <rect x="924" y="144" width="246" height="246" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="1047" y="174" font-size="21" font-weight="bold" fill="#203047" text-anchor="middle">GeoMetricLoss</text>
+  <rect x="938" y="191" width="218" height="56" rx="2" fill="white" stroke="#536575" stroke-width="1.2"/>
+  <text x="1047" y="214" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Metric objective 1</text>
+  <text x="1047" y="238" font-size="18" font-weight="normal" fill="#00856b" text-anchor="middle">GT 1</text>
+  <rect x="938" y="278" width="218" height="56" rx="2" fill="white" stroke="#536575" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="1047" y="301" font-size="19" font-weight="normal" fill="#203047" text-anchor="middle">Objective 2 (optional)</text>
+  <text x="1047" y="325" font-size="18" font-weight="normal" fill="#00856b" text-anchor="middle">GT 2</text>
+  <text x="1047" y="356" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">Weighted sum</text>
+  <text x="1047" y="379" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">+ optional auxiliaries</text>
+  <path d="M1047 390 V446" fill="none" stroke="#536575" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="800" y="428" font-size="18" font-weight="normal" fill="#536575" text-anchor="middle">Descriptors retain sample order</text>
+  <rect x="190" y="447" width="980" height="67" rx="2" fill="white" stroke="#536575" stroke-width="1.3"/>
+  <text x="214" y="474" font-size="21" font-weight="bold" fill="#203047" text-anchor="start">Lightning · shared model and optimizer</text>
+  <text x="214" y="500" font-size="19" font-weight="normal" fill="#536575" text-anchor="start">AMP · distributed execution · checkpoints</text>
+  <text x="28" y="547" font-size="18" font-weight="normal" fill="#536575" text-anchor="start">Example composition; datasets supply their own readers and supervision.</text>
+</svg>

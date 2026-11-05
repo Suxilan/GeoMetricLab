@@ -1,0 +1,23 @@
+# Shared runtime policy only. Models, data, transforms and optimization are explicit.
+evaluation:
+  k_values: [1, 10, 25, 100]
+  metric: cosine
+  full_ranking: true
+runtime:
+  seed: 42
+  resume: null
+  validate_before_fit: false
+  # Optional single-process RNG restoration; not a claim of per-rank recovery.
+  save_rng: false
+  checkpoint:
+    monitor: val/mAP
+    mode: max
+    save_last: true
+    save_top_k: 3
+  logging:
+    tracking:
+      mode: online
+      project: GeoMetricLab
+    summary: true
+    progress: true
+    text_level: INFO

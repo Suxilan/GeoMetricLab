@@ -1,0 +1,40 @@
+# Raw BN descriptors from the best GL3D-selected joint checkpoint.
+extends: base.yaml
+method: gl3d_u1652_joint_pre_whitening
+model:
+  type: GeoEncoder
+  backbone:
+    type: PEFTDinoV2
+    repository: third_party/dinov2
+    backbone_name: peft_dinov2_vitb14
+    pretrained: true
+    num_unfrozen_blocks: 12
+    lora_r: 16
+    lora_alpha: 16
+    lora_dropout: 0.1
+    lora_bias: none
+    gradient_checkpointing: true
+    lora_targets:
+    - attn.qkv
+    - attn.proj
+    - mlp.fc1
+    - mlp.fc2
+  feature_adapter: patch_tokens
+  aggregator:
+    type: SCPP
+  use_bn: true
+  whitening: false
+  final_norm: false
+initialization:
+  path: results/gmlab/gl3d_u1652_joint/checkpoints/epoch=14-step=1575.ckpt
+  strip_prefixes:
+  - model.
+output:
+  layout: global
+  layer: descriptor
+  normalization: none
+  whitening: false
+precision: 32-true
+matmul_tf32: false
+cudnn_tf32: false
+storage_dtype: float32

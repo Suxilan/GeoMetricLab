@@ -1,0 +1,55 @@
+# Native gmlab model; pretrained state is configured separately.
+extends: base.yaml
+method: peft_dinov2_scpp_gl3d_pretrain
+model:
+  type: GeoEncoder
+  backbone:
+    type: PEFTDinoV2
+    backbone_name: peft_dinov2_vitb14
+    num_unfrozen_blocks: 12
+    lora_r: 16
+    lora_alpha: 16
+    lora_dropout: 0.1
+    lora_bias: none
+    lora_targets:
+    - attn.qkv
+    - attn.proj
+    - mlp.fc1
+    - mlp.fc2
+  feature_adapter: patch_tokens
+  aggregator:
+    type: SCPP
+  use_bn: true
+  whitening: false
+  final_norm: false
+output:
+  normalization: none
+  whitening: false
+transform:
+- type: ToImage
+- type: Resize
+  size:
+  - 322
+  - 322
+  interpolation: bicubic
+  antialias: true
+- type: ToDtype
+  dtype: float32
+  scale: true
+- type: Normalize
+  mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  std:
+  - 0.229
+  - 0.224
+  - 0.225
+initialization:
+  path: weights/peft_dinov2_scpp_gl3d_pretrain.pth
+  strip_prefixes:
+  - module.
+  - model.
+  rename_prefixes:
+    backbone.model.: backbone.dino.
+    model.: backbone.dino.

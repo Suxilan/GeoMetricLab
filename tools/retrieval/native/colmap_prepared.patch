@@ -1,0 +1,282 @@
+COLMAP prepared-BoW adapter patch (BSD-3-Clause).
+Source: https://github.com/colmap/colmap
+Retain the upstream copyright and license in LICENSES/COLMAP.txt; see NOTICE.
+GeoMetricLab modifications: expose prepared encoding, indexing and query stages.
+
+--- a/colmap/exe/vocab_tree.cc
++++ b/colmap/exe/vocab_tree.cc
+@@ -9,6 +9,7 @@
+ #include "colmap/util/file.h"
+ #include "colmap/util/hash_containers.h"
+ #include "colmap/util/timer.h"
++#include "prepared_bow.h"
+ 
+ namespace colmap {
+ namespace {
+@@ -84,6 +85,11 @@
+   retrieval::VisualIndex::QueryOptions query_options;
+   retrieval::VisualIndex::IndexOptions index_options;
+   int max_num_features = -1;
++  std::string benchmark_stage;
++  std::filesystem::path prepared_path, phase_metrics_path;
++  int repeats = 3;
++  int warmup_queries = 64;
++  std::string previous_trials, query_identity;
+ 
+   OptionManager options;
+   options.AddDatabaseOptions();
+@@ -99,8 +105,23 @@
+   options.AddDefaultOption("num_images_after_verification",
+                            &query_options.num_images_after_verification);
+   options.AddDefaultOption("max_num_features", &max_num_features);
++  options.AddDefaultOption("benchmark_stage", &benchmark_stage);
++  options.AddDefaultOption("prepared_path", &prepared_path);
++  options.AddDefaultOption("phase_metrics_path", &phase_metrics_path);
++  options.AddDefaultOption("repeats", &repeats);
++  options.AddDefaultOption("warmup_queries", &warmup_queries);
++  options.AddDefaultOption("previous_trials", &previous_trials);
++  options.AddDefaultOption("query_identity", &query_identity);
+   if (!options.Parse(argc, argv)) {
+     return EXIT_FAILURE;
++  }
++
++  if (!benchmark_stage.empty()) {
++    return benchmark::Run(benchmark_stage, *options.database_path, vocab_tree_path,
++                          database_image_list_path, prepared_path, output_index_path,
++                          phase_metrics_path, query_options.num_threads,
++                          query_options.max_num_images, repeats, warmup_queries,
++                          previous_trials, query_identity);
+   }
+ 
+   index_options.num_threads = query_options.num_threads;
+--- a/colmap/retrieval/inverted_file.h
++++ b/colmap/retrieval/inverted_file.h
+@@ -96,6 +96,14 @@
+   // Given a query feature, performs inverted file scoring.
+   void ScoreFeature(const DescType& descriptor,
+                     std::vector<ImageScore>* image_scores) const;
++
++  void AddEncodedEntry(const EntryType& entry) {
++    entries_.push_back(entry);
++    status_ &= ~kEntriesSorted;
++  }
++
++  void ScoreEncodedFeature(const std::bitset<kEmbeddingDim>& descriptor,
++                           std::vector<ImageScore>* image_scores) const;
+ 
+   // Get the identifiers of all indexed images in this file.
+   void GetImageIds(FlatHashSet<int>* ids) const;
+@@ -270,6 +278,16 @@
+     const DescType& descriptor, std::vector<ImageScore>* image_scores) const {
+   THROW_CHECK_EQ(descriptor.size(), kEmbeddingDim);
+ 
++  std::bitset<kEmbeddingDim> binary;
++  ConvertToBinaryDescriptor(descriptor, &binary);
++  ScoreEncodedFeature(binary, image_scores);
++}
++
++template <int kEmbeddingDim>
++void InvertedFile<kEmbeddingDim>::ScoreEncodedFeature(
++    const std::bitset<kEmbeddingDim>& bin_descriptor,
++    std::vector<ImageScore>* image_scores) const {
++
+   image_scores->clear();
+ 
+   if (!IsUsable()) {
+@@ -279,9 +297,6 @@
+   if (entries_.empty()) {
+     return;
+   }
+-
+-  std::bitset<kEmbeddingDim> bin_descriptor;
+-  ConvertToBinaryDescriptor(descriptor, &bin_descriptor);
+ 
+   ImageScore image_score;
+   image_score.image_id = entries_.front().image_id;
+--- a/colmap/retrieval/inverted_index.h
++++ b/colmap/retrieval/inverted_index.h
+@@ -68,6 +68,70 @@
+   void Query(const DescType& descriptors,
+              const WordIds& word_ids,
+              std::vector<ImageScore>* image_scores) const;
++
++  void Encode(const DescType& descriptors, const WordIds& words,
++              std::vector<uint64_t>* signatures) const {
++    signatures->resize(words.size());
++    for (Eigen::Index row = 0; row < words.rows(); ++row) {
++      const ProjDescType projected = proj_matrix_ * descriptors.row(row).transpose();
++      for (Eigen::Index col = 0; col < words.cols(); ++col) {
++        const auto word = words(row, col);
++        if (word == kInvalidWordId) continue;
++        std::bitset<kEmbeddingDim> binary;
++        inverted_files_.at(word).ConvertToBinaryDescriptor(projected, &binary);
++        (*signatures)[row * words.cols() + col] = binary.to_ullong();
++      }
++    }
++  }
++
++  void AddEncoded(int image_id, const std::vector<int64_t>& words,
++                  const std::vector<uint64_t>& signatures,
++                  const std::vector<FeatureGeometry>& geometry) {
++    THROW_CHECK_EQ(words.size(), geometry.size());
++    for (size_t row = 0; row < words.size(); ++row) {
++      if (words[row] == kInvalidWordId) continue;
++      EntryType entry;
++      entry.image_id = image_id;
++      entry.feature_idx = row;
++      entry.geometry = geometry[row];
++      entry.descriptor = std::bitset<kEmbeddingDim>(signatures[row]);
++      inverted_files_.at(words[row]).AddEncodedEntry(entry);
++    }
++  }
++
++  float QueryNormalization(const std::vector<int64_t>& words) const {
++    double similarity = 0.0;
++    for (auto word : words) {
++      if (word != kInvalidWordId) similarity += inverted_files_.at(word).SquaredIDFWeight();
++    }
++    return similarity > 0.0 ? 1.0f / std::sqrt(static_cast<float>(similarity)) : 1.0f;
++  }
++
++  void QueryEncoded(const std::vector<int64_t>& words,
++                    const std::vector<uint64_t>& signatures,
++                    float normalization,
++                    std::vector<ImageScore>* image_scores) const {
++    image_scores->clear();
++    NodeHashMap<int, int> score_map;
++    std::vector<ImageScore> scores;
++    for (size_t i = 0; i < words.size(); ++i) {
++      if (words[i] == kInvalidWordId) continue;
++      inverted_files_.at(words[i]).ScoreEncodedFeature(
++          std::bitset<kEmbeddingDim>(signatures[i]), &scores);
++      for (const auto& score : scores) {
++        auto it = score_map.find(score.image_id);
++        if (it == score_map.end()) {
++          score_map.emplace(score.image_id, image_scores->size());
++          image_scores->push_back(score);
++        } else {
++          (*image_scores)[it->second].score += score.score;
++        }
++      }
++    }
++    for (auto& score : *image_scores) {
++      score.score *= normalization * normalization_constants_.at(score.image_id);
++    }
++  }
+ 
+   void ConvertToBinaryDescriptor(
+       int64_t word_id,
+--- a/colmap/retrieval/visual_index.cc
++++ b/colmap/retrieval/visual_index.cc
+@@ -506,6 +506,55 @@
+     }
+   }
+ 
++  EncodedImage Encode(const QueryOptions& options,
++                       const FeatureKeypoints& keypoints,
++                       const FeatureDescriptorsFloat& descriptors) const override {
++    THROW_CHECK_EQ(descriptors.type, feature_type_);
++    EncodedImage encoded;
++    encoded.rows = descriptors.data.rows();
++    encoded.neighbors = options.num_neighbors;
++    if (encoded.rows == 0) return encoded;
++    const WordIds words = FindWordIds(descriptors.data, options.num_neighbors,
++                                      options.num_checks, options.num_threads);
++    encoded.words.assign(words.data(), words.data() + words.size());
++    inverted_index_.Encode(descriptors.data, words, &encoded.signatures);
++    if (!keypoints.empty()) {
++      THROW_CHECK_EQ(keypoints.size(), encoded.rows);
++      for (const auto& point : keypoints) {
++        FeatureGeometry geometry;
++        geometry.x = point.x;
++        geometry.y = point.y;
++        geometry.scale = point.ComputeScale();
++        geometry.orientation = point.ComputeOrientation();
++        encoded.geometry.push_back(geometry);
++      }
++    }
++    return encoded;
++  }
++
++  void AddEncoded(int image_id, const EncodedImage& encoded) override {
++    THROW_CHECK_EQ(encoded.neighbors, 1);
++    THROW_CHECK_EQ(encoded.geometry.size(), encoded.rows);
++    if (IsImageIndexed(image_id)) return;
++    image_ids_.insert(image_id);
++    prepared_ = false;
++    inverted_index_.AddEncoded(image_id, encoded.words, encoded.signatures, encoded.geometry);
++  }
++
++  void FinalizeQuery(EncodedImage* encoded) const override {
++    THROW_CHECK(prepared_);
++    encoded->normalization = inverted_index_.QueryNormalization(encoded->words);
++  }
++
++  void QueryEncoded(const QueryOptions& options, const EncodedImage& encoded,
++                     std::vector<ImageScore>* image_scores) const override {
++    THROW_CHECK(prepared_);
++    THROW_CHECK_LE(options.num_images_after_verification, 0);
++    inverted_index_.QueryEncoded(encoded.words, encoded.signatures,
++                                 encoded.normalization, image_scores);
++    FilterAndSort(options, image_scores);
++  }
++
+  private:
+   using WordIds =
+       Eigen::Matrix<int64_t, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+@@ -554,6 +603,12 @@
+                             options.num_checks,
+                             options.num_threads);
+     inverted_index_.Query(descriptors, *word_ids, image_scores);
++
++    FilterAndSort(options, image_scores);
++  }
++
++  void FilterAndSort(const QueryOptions& options,
++                      std::vector<ImageScore>* image_scores) const {
+ 
+     if (options.image_id_filter) {
+       image_scores->erase(
+--- a/colmap/retrieval/visual_index.h
++++ b/colmap/retrieval/visual_index.h
+@@ -3,6 +3,9 @@
+ #pragma once
+ 
+ #include "colmap/feature/types.h"
++#include "colmap/retrieval/geometry.h"
++#include <cstdint>
++#include <vector>
+ #include "colmap/retrieval/utils.h"
+ #include "colmap/util/eigen_alignment.h"
+ 
+@@ -25,6 +28,14 @@
+ //    distinctiveness for location recognition. ACCV 2014.
+ class VisualIndex {
+  public:
++  struct EncodedImage {
++    int rows = 0;
++    int neighbors = 0;
++    std::vector<int64_t> words;
++    std::vector<uint64_t> signatures;
++    std::vector<FeatureGeometry> geometry;
++    float normalization = 1.0f;
++  };
+   struct IndexOptions {
+     // The number of nearest neighbor visual words that each feature descriptor
+     // is assigned to.
+@@ -129,6 +140,15 @@
+       const std::filesystem::path& vocab_tree_path);
+   virtual void Write(const std::filesystem::path& path) const = 0;
+ 
++  virtual EncodedImage Encode(const QueryOptions& options,
++                              const FeatureKeypoints& keypoints,
++                              const FeatureDescriptorsFloat& descriptors) const = 0;
++  virtual void AddEncoded(int image_id, const EncodedImage& encoded) = 0;
++  virtual void FinalizeQuery(EncodedImage* encoded) const = 0;
++  virtual void QueryEncoded(const QueryOptions& options,
++                            const EncodedImage& encoded,
++                            std::vector<ImageScore>* image_scores) const = 0;
++
+  protected:
+   virtual void ReadFromFaiss(const std::filesystem::path& path,
+                              long offset,

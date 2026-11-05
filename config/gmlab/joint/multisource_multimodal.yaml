@@ -1,0 +1,240 @@
+# Composition tutorial: two independent datasets in University1652 folder layout.
+# Set source_a/source_b paths to your datasets; class namespaces remain independent.
+# Shared ResNet, per-modality aggregation and BN. Not a trained baseline.
+extends: base.yaml
+pipeline:
+  task:
+    type: MultimodalPipeline
+    modalities: [satellite, drone]
+model:
+  type: NamedBranches
+  encoders:
+    shared:
+      type: ResNet
+      backbone_name: resnet18
+      pretrained: false
+      crop_last_block: false
+  heads:
+    mean:
+      type: Avg
+      in_channels: 512
+    gem:
+      type: GeM
+      in_channels: 512
+  head_adapters:
+    mean: pooled_descriptor
+    gem: pooled_descriptor
+  normalizations:
+    satellite_bn:
+      type: torch.nn.BatchNorm1d
+      num_features: 512
+    drone_bn:
+      type: torch.nn.BatchNorm1d
+      num_features: 512
+  branches:
+    satellite:
+      encoder: shared
+      head: mean
+      normalization: satellite_bn
+      normalize: true
+    drone:
+      encoder: shared
+      head: gem
+      normalization: drone_bn
+      normalize: true
+  modality_routes:
+    satellite: satellite
+    drone: drone
+loss:
+  type: GeoMetricLoss
+  primary_objective:
+    type: MetricObjective
+    distributed: false
+optimizer:
+  type: AdamW
+  lr: 0.0001
+data:
+  transforms:
+    satellite_train:
+    - type: RandomResizedCrop
+      size:
+      - 224
+      - 224
+      scale:
+      - 0.76
+      - 1.0
+      ratio:
+      - 1.0
+      - 1.0
+      interpolation: bicubic
+    - type: ToImage
+    - type: ColorJitter
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.05
+    - type: ToDtype
+      dtype: float32
+      scale: true
+    - type: Normalize
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    drone_train:
+    - type: RandomResizedCrop
+      size:
+      - 256
+      - 256
+      scale:
+      - 0.76
+      - 1.0
+      ratio:
+      - 1.0
+      - 1.0
+      interpolation: bicubic
+    - type: ToImage
+    - type: ToDtype
+      dtype: float32
+      scale: true
+    - type: Normalize
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    satellite_eval:
+    - type: Resize
+      size:
+      - 224
+      - 224
+      interpolation: bicubic
+    - type: ToImage
+    - type: ToDtype
+      dtype: float32
+      scale: true
+    - type: Normalize
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    drone_eval:
+    - type: Resize
+      size:
+      - 256
+      - 256
+      interpolation: bicubic
+    - type: ToImage
+    - type: ToDtype
+      dtype: float32
+      scale: true
+    - type: Normalize
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+  train:
+    sources:
+      collection_a:
+        transform:
+          by_modality:
+            satellite: satellite_train
+            drone: drone_train
+        dataset:
+          type: datasets.train.u1652.University1652InstanceDataset
+          dataset_path: data/source_a/train
+          source_scope: collection_a
+          views:
+          - satellite
+          - drone
+          sampler:
+            type: ModalityQuotaSampler
+            quotas:
+              satellite: 1
+              drone: 2
+            replacement: true
+            missing: skip
+        loader:
+          batch_size: 4
+          shuffle: true
+          num_workers: 4
+          collate_fn: group_cross_modal_samples
+      collection_b:
+        transform:
+          by_modality:
+            satellite: satellite_train
+            drone: drone_train
+        dataset:
+          type: datasets.train.u1652.University1652InstanceDataset
+          dataset_path: data/source_b/train
+          source_scope: collection_b
+          views:
+          - satellite
+          - drone
+          sampler:
+            type: ModalityQuotaSampler
+            quotas:
+              satellite: 1
+              drone: 2
+            replacement: true
+            missing: skip
+        loader:
+          batch_size: 4
+          shuffle: true
+          num_workers: 4
+          collate_fn: group_cross_modal_samples
+  valid:
+    sources:
+      drone2satellite:
+        transform: &id001
+          by_modality:
+            satellite: satellite_eval
+            drone: drone_eval
+        dataset:
+          type: datasets.valid.u1652.u1652_retrieval
+          metadata_path: data/source_a/test
+          split: test
+          direction: drone2satellite
+        loader: &id002
+          batch_size: 32
+          num_workers: 4
+          collate_fn: modality_collate
+      satellite2drone:
+        transform: *id001
+        dataset:
+          type: datasets.valid.u1652.u1652_retrieval
+          metadata_path: data/source_a/test
+          split: test
+          direction: satellite2drone
+        loader: *id002
+runtime:
+  run_dir: results/gmlab/multisource_multimodal
+  checkpoint:
+    save_top_k: 3
+    monitor: val/drone2satellite/mAP
+    mode: max
+  trainer:
+    accelerator: auto
+    devices: 1
+    precision: bf16-mixed
+    max_epochs: 20
+    log_every_n_steps: 1
+    strategy: ddp_find_unused_parameters_true
+  evaluation_trainer:
+    accelerator: auto
+    devices: 1

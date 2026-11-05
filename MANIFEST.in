@@ -1,0 +1,62 @@
+include pyproject.toml README.md LICENSE NOTICE requirements.txt environment.yml Makefile
+recursive-include LICENSES *.txt
+recursive-include gmlab *.py *.md
+include config/gmlab/README.md
+include config/gmlab/runtime.yaml
+include config/gmlab/metric/README.md
+include config/gmlab/metric/base.yaml
+include config/gmlab/metric/u1652_labels.yaml
+include config/gmlab/relation/README.md
+include config/gmlab/relation/base.yaml
+include config/gmlab/relation/gl3d_supscene_peft_dinov2_scpp.yaml
+include config/gmlab/relation/u1652_global_circleloss_a6k.yaml
+include config/gmlab/multimodal/README.md
+include config/gmlab/multimodal/base.yaml
+include config/gmlab/multimodal/u1652_multimodal.yaml
+include config/gmlab/joint/README.md
+include config/gmlab/joint/base.yaml
+include config/gmlab/joint/gl3d_u1652_joint.yaml
+include config/gmlab/joint/multisource_multimodal.yaml
+exclude uv.lock .gitmodules .gitignore
+prune .codex
+prune .github
+prune src
+prune engine
+prune legacy
+prune datasets
+include datasets/README.md datasets/__init__.py
+include datasets/train/__init__.py datasets/train/gl3d.py datasets/train/u1652.py
+include datasets/valid/__init__.py datasets/valid/gl3d.py datasets/valid/u1652.py datasets/valid/uav.py
+prune tests
+prune scripts
+include scripts/README.md scripts/_common.sh
+include scripts/train/run_training.sh scripts/eval/evaluate_joint.sh
+include scripts/features/run_whitening_feature_extraction.sh scripts/weights/fit_whitening.sh
+include scripts/retrieval/rank_cached_features.sh scripts/retrieval/extract_and_build_pairs.sh
+include scripts/data/create_sues200_metadata.py scripts/data/create_denseuav_metadata.py
+include scripts/data/sues200_official_split.json
+prune tools
+include tools/README.md
+recursive-include tools/environment *.py *.sh
+recursive-include tools/features *.py
+recursive-include tools/retrieval *.py *.h *.patch
+recursive-include tools/weights *.py
+include config/extraction/base.yaml config/extraction/peft_dinov2_scpp_gl3d_pretrain.yaml
+include config/extraction/gl3d_u1652_joint_pre_whitening.yaml config/whitening/example.yaml
+prune third_party
+include third_party/README.md
+prune GPU-Re-Ranking
+prune weights
+prune assets
+include assets/GeoMetricLab.png
+include assets/GeoMetricLab-banner.png
+include assets/supervision.svg assets/metric_composition.svg
+prune data
+prune results
+prune cache
+prune docs
+prune notebooks
+prune logs
+prune wandb
+prune checkpoints
+global-exclude *.py[cod] *.log *.pth *.pt *.ckpt *.h5 *.ipynb

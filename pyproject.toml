@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=78", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geometriclab"
+version = "0.1.0"
+description = "Composable metric learning components and Lightning integration"
+readme = "README.md"
+license-files = ["LICENSE", "NOTICE", "LICENSES/*.txt"]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.10,<2.11",
+    "torchvision>=0.25,<0.26",
+    "pytorch-metric-learning>=2.9,<2.10",
+    "numpy>=1.26,<3",
+    "Pillow>=12,<14",
+]
+
+[project.optional-dependencies]
+artifacts = ["h5py>=3.14,<4"]
+models = ["timm>=1.0.26,<1.1"]
+peft = ["peft>=0.19,<0.22", "einops>=0.8,<0.9"]
+runtime = ["pytorch-lightning>=2.6.1,<2.7", "PyYAML>=6,<7", "rich>=13,<16"]
+swanlab = ["swanlab>=0.7.11,<0.11"]
+dev = ["pytest>=8", "build>=1.2", "ruff>=0.9"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gmlab", "gmlab.*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+gmlab = ["README.md", "API.md", "INSTALL.md", "MULTIMODAL.md", "RETRIEVAL.md"]
+"gmlab.artifacts" = ["README.md"]
+"gmlab.datasets" = ["README.md"]
+
+[tool.setuptools.data-files]
+"share/geometriclab/recipes" = [
+    "config/gmlab/README.md",
+    "config/gmlab/runtime.yaml",
+]
+"share/geometriclab/recipes/metric" = [
+    "config/gmlab/metric/README.md",
+    "config/gmlab/metric/base.yaml",
+    "config/gmlab/metric/u1652_labels.yaml",
+]
+"share/geometriclab/recipes/relation" = [
+    "config/gmlab/relation/README.md",
+    "config/gmlab/relation/base.yaml",
+    "config/gmlab/relation/gl3d_supscene_peft_dinov2_scpp.yaml",
+    "config/gmlab/relation/u1652_global_circleloss_a6k.yaml",
+]
+"share/geometriclab/recipes/multimodal" = [
+    "config/gmlab/multimodal/README.md",
+    "config/gmlab/multimodal/base.yaml",
+    "config/gmlab/multimodal/u1652_multimodal.yaml",
+]
+"share/geometriclab/recipes/joint" = [
+    "config/gmlab/joint/README.md",
+    "config/gmlab/joint/base.yaml",
+    "config/gmlab/joint/gl3d_u1652_joint.yaml",
+    "config/gmlab/joint/multisource_multimodal.yaml",
+]

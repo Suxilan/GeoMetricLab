@@ -1,0 +1,36 @@
+# Public template: inherit this file; fill every required null below.
+# See README.md for a complete example and the inheritance rules.
+extends: ../runtime.yaml
+pipeline:
+  type: GeoPipeline
+  supervision: labels
+  training_output: descriptor
+  # Required only for named model outputs used in evaluation/extraction.
+  retrieval_output: null
+
+# Required component mappings. No pretrained network or loss is chosen silently.
+model: null
+loss: null
+optimizer: null
+
+data:
+  train:
+    dataset: null
+    loader:
+      batch_size: 32
+      num_workers: 4
+      # For ordinary (inputs, labels) samples, native default_collate is sufficient.
+      # Readers returning structured rows must declare their compatible collate.
+
+# Practical training defaults; model, sampling and GT remain experiment-owned.
+# Formal experiments override hardware/epochs explicitly, not via a smoke recipe.
+runtime:
+  trainer:
+    accelerator: auto
+    devices: 1
+    precision: bf16-mixed
+    max_epochs: 20
+  checkpoint:
+    monitor: null
+    save_top_k: 0
+    save_last: true

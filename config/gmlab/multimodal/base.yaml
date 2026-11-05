@@ -1,0 +1,18 @@
+# Public multimodal template. See README.md for sharing and heterogeneous inputs.
+extends: ../metric/base.yaml
+pipeline:
+  type: MultimodalPipeline
+  # Required: explicit unique names, e.g. [rgb, thermal, lidar].
+  # Every declared modality needs a model route; names are not dataset roles.
+  modalities: null
+
+data:
+  train:
+    loader:
+      # Labels + canonical sample rows. Named GT requires its own named-GT collate.
+      collate_fn: group_samples
+
+# Fill model with ModalityEncoder or routed NamedBranches.
+# Encoder/head/aggregation/BN sharing is explicit in that model's module pools.
+# Per-modality image transforms live in data.transforms and train.transform.
+# Point inputs use downstream readers/transforms rather than image transforms.

@@ -1,0 +1,4 @@
+# Unified diff context lines include a required leading space.
+*.patch whitespace=-blank-at-eol
+# Preserve upstream license texts byte-for-byte.
+LICENSES/*.txt whitespace=-blank-at-eol

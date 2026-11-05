@@ -1,0 +1,198 @@
+# U1652 overlap GT: satellite-seeded subgraphs and global MS mining.
+# Paths are relative to the launch working directory.
+# Per-GPU training batch: four subgraphs, up to 32 images each.
+# Existing held-out retrieval test data select checkpoints, so subsequent evaluation
+# on them is not an independent test of the selected model.
+# Graph GT thresholds and ranking weight are starting values inherited from GL3D;
+# Pi3 overlap is a different annotation measure and these are not tuned optima.
+
+# DINOv2 pretrained state is provided by the local repository and Torch hub cache.
+
+extends: base.yaml
+
+model:
+  type: GeoEncoder
+  backbone:
+    type: PEFTDinoV2
+    repository: third_party/dinov2
+    backbone_name: peft_dinov2_vitb14
+    pretrained: true
+    num_unfrozen_blocks: 12
+    lora_r: 16
+    lora_alpha: 16
+    lora_dropout: 0.1
+    lora_bias: none
+    gradient_checkpointing: false
+    lora_targets: [attn.qkv, attn.proj, mlp.fc1, mlp.fc2]
+    capture_attention: false
+  feature_adapter: patch_tokens
+  aggregator:
+    type: SCPP
+    p_s: 1.3
+    p_a: 4.6
+    eps: 1.0e-06
+  use_bn: true
+  whitening: false
+  final_norm: true
+
+# Model-only initialization for a new run; runtime.resume restores training state.
+
+initialization:
+  checkpoint: null
+  strict: true
+
+# Global-candidate MS + 10 * within-subgraph ranking.
+
+loss:
+  type: GeoMetricLoss
+  primary_objective:
+    type: MetricObjective
+    loss_fn_name: CircleLoss
+    normalize_embeddings: true
+    distributed: true
+    miner_name: null
+    loss_kwargs:
+      m: 0.4
+      gamma: 80
+  auxiliaries:
+    ranking:
+      weight: 10.0
+      type: OverlapRankingObjective
+      normalize_embeddings: true
+      ov_margin: 0.05
+      sim_margin: 0.05
+      chunk_size: 64
+
+
+optimizer:
+  type: AdamW
+  lr: 0.0001
+  weight_decay: 0.01
+  groups:
+    - prefixes: [model.backbone]
+      lr: 0.0001
+    - prefixes: [model.aggregator, model.whitening_layer]
+      lr: 0.0001
+
+scheduler:
+  type: WarmupCosine
+  interval: step
+  warmup_start_factor: 0.01
+  warmup_ratio: 0.1
+  eta_min: 1.0e-07
+
+# Query/gallery identities, GT and self exclusion come from U1652 retrieval.
+
+evaluation:
+  k_values: [1, 5, 10]
+  metric: cosine
+  full_ranking: true
+data:
+  transforms:
+    train:
+      - type: Resize
+        size: [224, 224]
+        interpolation: bicubic
+        antialias: true
+      - type: ToImage
+      - type: ToDtype
+        dtype: float32
+        scale: true
+      - type: Normalize
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+    eval:
+      - type: Resize
+        size: [322, 322]
+        interpolation: bicubic
+        antialias: true
+      - type: ToImage
+      - type: ToDtype
+        dtype: float32
+        scale: true
+      - type: Normalize
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+  train:
+    dataset:
+      type: datasets.train.u1652.University1652SubgraphDataset
+      dataset_path: data/university1652/train
+      n_sub: 16
+      sampler:
+        type: SubgraphSampler
+        mode: anchor_expand
+        seed_modality: satellite
+        iou_th: 0.2
+      adaptive_sampling: true
+      min_images_per_scene: 0
+      scenes_per_epoch: null
+      samples_per_scene: null
+    transform: train
+    loader:
+      batch_size: 16
+      num_workers: 8
+      # null inherits runtime.seed through the native process seed.
+      sampler:
+        type: SceneEpochSampler
+        seed: null
+        shuffle: true
+      collate_fn:
+        neg_th: null
+        pos_th: 0.125
+        type: PadSubgraphs
+        diag_weight: null
+  valid:
+    dataset:
+      type: datasets.valid.u1652.u1652_retrieval
+      metadata_path: data/university1652/test
+      direction: drone2satellite
+      split: test
+    transform: eval
+    loader:
+      batch_size: 128
+      num_workers: 8
+
+# auto uses all visible GPUs; select them explicitly with CUDA_VISIBLE_DEVICES.
+# final_validation: force also evaluates the final training step.
+# Data-worker RNG cursors are not checkpointed.
+
+runtime:
+  experiment_name: u1652_global_circleloss_a6k
+  seed: 42
+  resume: null
+  validate_before_fit: true
+  save_rng: false
+  checkpoint:
+    monitor: val/mAP
+    mode: max
+    save_last: true
+    save_top_k: 3
+  logging:
+    tracking:
+      mode: online
+      project: GeoMetricLab
+    summary: true
+    progress: true
+    text_level: INFO
+  final_validation: force
+  trainer:
+    accelerator: gpu
+    devices: auto
+    strategy: auto
+    precision: bf16-mixed
+    max_epochs: 50
+    gradient_clip_val: 1.0
+    check_val_every_n_epoch: 5
+    log_every_n_steps: 50
+    sync_batchnorm: true
+    use_distributed_sampler: false
+  evaluation_trainer:
+    accelerator: gpu
+    devices: 1
+    precision: 32-true
+  callbacks:
+    - type: EarlyStopping
+      monitor: val/mAP
+      mode: max
+      patience: 10
+      min_delta: 0.0

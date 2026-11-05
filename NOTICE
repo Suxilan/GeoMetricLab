@@ -1,0 +1,120 @@
+GeoMetricLab — third-party notices
+
+The root LICENSE applies to original GeoMetricLab code unless a component
+below states otherwise. It does not replace the licenses of bundled
+adaptations, external repositories or model weights.
+The upstream license texts below are included verbatim in LICENSES/ and in
+the installed distribution's license directory.
+
+Bundled adaptations
+-------------------
+
+Bag-of-Queries (MIT)
+  Files: gmlab/models/aggregator/boq.py, gmlab/models/backbone/resnet.py
+  Source: https://github.com/amaralibey/Bag-of-Queries
+  Terms: LICENSES/BoQ.txt
+
+CosPlace (MIT)
+  File: gmlab/models/aggregator/cosplace.py
+  Source: https://github.com/gmberton/CosPlace
+  Terms: LICENSES/CosPlace.txt
+
+CricaVPR (MIT)
+  File: gmlab/models/aggregator/cricavpr.py
+  Source: https://github.com/Lu-Feng/CricaVPR
+  Terms: LICENSES/CricaVPR.txt
+
+EigenPlaces (MIT)
+  File: gmlab/models/aggregator/eigenplace.py
+  Source: https://github.com/gmberton/EigenPlaces
+  Terms: LICENSES/EigenPlaces.txt
+
+CNN Image Retrieval / GeM (MIT)
+  File: gmlab/models/aggregator/gem.py
+  Source: https://github.com/filipradenovic/cnnimageretrieval-pytorch
+  Terms: LICENSES/GeM.txt
+
+GhostVLAD (MIT)
+  File: gmlab/models/aggregator/ghostvlad.py
+  Source: https://github.com/keetsky/Net_ghostVLAD-pytorch
+  Terms: LICENSES/GhostVLAD.txt
+
+SuperVLAD (MIT)
+  File: gmlab/models/aggregator/supervlad.py
+  Source: https://github.com/Lu-Feng/SuperVLAD
+  Terms: LICENSES/SuperVLAD.txt, LICENSES/NetVLAD-pytorch.txt
+
+OpenGlue (MIT)
+  Portions of log_otp_solver and get_matching_probs in the GPL SALAD adaptation:
+  gmlab/models/aggregator/salad.py
+  Source: https://github.com/ucuapps/OpenGlue
+  Terms: LICENSES/OpenGlue.txt
+
+SALAD (GPL v3)
+  Class: Salad in gmlab/models/aggregator/salad.py
+  Source: https://github.com/serizba/salad
+  Terms: LICENSES/SALAD.txt
+  GeoMetricLab modification notice, 2026-11-05: the GPL adaptation uses
+  AggregatorBase, separate CLS/patch inputs and descriptor/auxiliary outputs.
+
+AnyLoc (BSD 3-Clause)
+  File: gmlab/models/anyloc.py
+  Source: https://github.com/AnyLoc/AnyLoc
+  Terms: LICENSES/AnyLoc.txt
+
+GNN re-ranking (MIT implementation)
+  File: gmlab/rerank/gnn_reranker.py
+  Source: https://github.com/layumi/Person_reID_baseline_pytorch/tree/master/GPU-Re-Ranking
+  Terms: LICENSES/GNN-ReRanking.txt
+
+DINOv3 (DINOv3 License Agreement)
+  File: gmlab/models/modules/rope_position_encoding.py
+  Source: https://github.com/facebookresearch/dinov3
+  Terms: LICENSES/DINOv3.txt
+  GeoMetricLab modification notice, 2026-11-05: formatting and module placement.
+
+MoCo-v3 (Creative Commons Attribution-NonCommercial 4.0 International)
+  Method: MoCoProjection._build_mlp in gmlab/models/projection.py
+  Copyright (c) Facebook, Inc. and its affiliates.
+  Source: https://github.com/facebookresearch/moco-v3/blob/main/moco/builder.py
+  Terms: LICENSES/MoCo-v3.txt
+  GeoMetricLab modification notice, 2026-11-05: renamed builder arguments and
+  integrated the builder into a standalone head with input validation.
+  This attribution concerns the MoCo-derived builder, not ProjectionHead or
+  RetrievalHead in the same file.
+
+NetVLAD-pytorch (MIT)
+  File: gmlab/models/aggregator/netvlad.py
+  Source: https://github.com/lyakaap/NetVLAD-pytorch/blob/7c1f62f1bec2e58c332aec5617a20b9d50482845/netvlad.py
+  Terms: LICENSES/NetVLAD-pytorch.txt
+  GeoMetricLab adaptations: batched residual aggregation, center-based scale
+  initialization, token inputs, SoftP/DPN and assignment diagnostics.
+
+COLMAP prepared-BoW adapter (BSD 3-Clause)
+  Files: tools/retrieval/native/colmap_prepared.patch,
+         tools/retrieval/native/prepared_bow.h
+  Source: https://github.com/colmap/colmap
+  Terms: LICENSES/COLMAP.txt
+  GeoMetricLab changes expose prepared encoding/index/query stages while
+  retaining COLMAP's scoring. COLMAP source trees and binaries are not bundled.
+
+Use and redistribution
+----------------------
+
+Retain the listed copyright notices, license texts and modification notices
+when redistributing the corresponding code. The source release includes the
+adapted implementations and the build configuration.
+
+The SALAD adaptation is distributed under GPL v3, including its requirements
+for covered derivative works and corresponding source. The MoCo-derived
+builder is subject to CC BY-NC 4.0, including attribution and non-commercial
+conditions. DINOv3-derived RoPE remains under the DINOv3 License Agreement,
+including its redistribution, research acknowledgement and use conditions.
+The root MIT license does not waive these requirements; consult the retained
+license texts when combining or redistributing components.
+
+The full DINOv2, DINOv3 and Depth-Anything-V2 repositories are Git submodules,
+not part of the Python distribution. Their own notices and model-specific
+terms apply. Other local reference repositories, datasets, model weights and
+vocabularies are not shipped. See third_party/README.md for the full repository
+inventory, setup and external asset terms.

@@ -1,0 +1,239 @@
+# Joint graph training; source sampling and losses follow the single-source recipes.
+# GL3D: A3 MultiSimilarityLoss; U1652: CircleLoss (m=0.4, gamma=80).
+# Shared BN learns both domains. Batch exposure differs; loss weights are unchanged.
+# Four retrieval protocols are reported independently; GL3D mAP selects checkpoints.
+extends: base.yaml
+pipeline:
+  task:
+    supervision: relations
+model:
+  type: GeoEncoder
+  backbone:
+    type: PEFTDinoV2
+    repository: third_party/dinov2
+    backbone_name: peft_dinov2_vitb14
+    pretrained: true
+    num_unfrozen_blocks: 12
+    lora_r: 16
+    lora_alpha: 16
+    lora_dropout: 0.1
+    lora_bias: none
+    gradient_checkpointing: true
+    lora_targets:
+    - attn.qkv
+    - attn.proj
+    - mlp.fc1
+    - mlp.fc2
+  feature_adapter: patch_tokens
+  aggregator:
+    type: SCPP
+  use_bn: true
+  whitening: false
+  final_norm: true
+optimizer:
+  type: AdamW
+  lr: 0.0001
+  weight_decay: 0.01
+  groups:
+  - prefixes:
+    - model.backbone
+    lr: 0.0001
+  - prefixes:
+    - model.aggregator
+    - model.whitening_layer
+    lr: 0.0001
+scheduler:
+  type: WarmupCosine
+  interval: step
+  warmup_start_factor: 0.01
+  warmup_ratio: 0.1
+  eta_min: 1.0e-07
+data:
+  transforms:
+    train:
+    - type: Resize
+      size:
+      - 224
+      - 224
+      interpolation: bicubic
+      antialias: true
+    - type: ToImage
+    - type: ToDtype
+      dtype: float32
+      scale: true
+    - type: Normalize
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    eval:
+    - type: Resize
+      size:
+      - 322
+      - 322
+      interpolation: bicubic
+      antialias: true
+    - type: ToImage
+    - type: ToDtype
+      dtype: float32
+      scale: true
+    - type: Normalize
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+  train:
+    sources:
+      gl3d:
+        dataset:
+          type: datasets.train.gl3d.GL3DSubgraphDataset
+          dataset_path: data/GL3D/train
+          n_sub: 128
+          iou_th: 0.2
+          adaptive_sampling: true
+          min_images_per_scene: 0
+          scenes_per_epoch: null
+          samples_per_scene: null
+          sampling_multiplier: 1.0
+        transform: train
+        loader:
+          batch_size: 2
+          num_workers: 8
+          collate_fn:
+            neg_th: null
+            pos_th: 0.25
+            type: PadSubgraphs
+            diag_weight: null
+        loss:
+          type: GeoMetricLoss
+          primary_objective:
+            type: MetricObjective
+            loss_fn_name: MultiSimilarityLoss
+            normalize_embeddings: true
+            distributed: true
+            miner_name: null
+            loss_kwargs:
+              alpha: 2.0
+              beta: 50.0
+              base: 0.5
+          auxiliaries:
+            ranking:
+              weight: 10.0
+              type: OverlapRankingObjective
+              normalize_embeddings: true
+              ov_margin: 0.05
+              sim_margin: 0.05
+              chunk_size: 64
+      u1652:
+        dataset:
+          type: datasets.train.u1652.University1652SubgraphDataset
+          dataset_path: data/university1652/train
+          n_sub: 16
+          sampler:
+            type: SubgraphSampler
+            mode: anchor_expand
+            seed_modality: satellite
+            iou_th: 0.2
+          adaptive_sampling: true
+          min_images_per_scene: 0
+          scenes_per_epoch: null
+          samples_per_scene: null
+          sampling_multiplier: 1.5
+        transform: train
+        loader:
+          batch_size: 32
+          num_workers: 8
+          collate_fn:
+            neg_th: null
+            pos_th: 0.25
+            type: PadSubgraphs
+            diag_weight: null
+        loss:
+          type: GeoMetricLoss
+          primary_objective:
+            type: MetricObjective
+            loss_fn_name: CircleLoss
+            normalize_embeddings: true
+            distributed: true
+            miner_name: null
+            loss_kwargs:
+              m: 0.4
+              gamma: 80
+          auxiliaries:
+            ranking:
+              weight: 10.0
+              type: OverlapRankingObjective
+              normalize_embeddings: true
+              ov_margin: 0.05
+              sim_margin: 0.05
+              chunk_size: 64
+  valid:
+    sources:
+      gl3d:
+        dataset:
+          type: datasets.valid.gl3d.gl3d_retrieval
+          metadata_path: data/GL3D/test
+          split: test
+        transform: eval
+        loader:
+          batch_size: 128
+          num_workers: 8
+      u1652:
+        dataset:
+          type: datasets.valid.u1652.u1652_retrieval
+          metadata_path: data/university1652/test
+          split: test
+          direction: drone2satellite
+        transform: eval
+        loader:
+          batch_size: 128
+          num_workers: 8
+      sues:
+        dataset:
+          type: datasets.valid.uav.sues200_retrieval
+          metadata_path: data/sues200
+          split: test
+        transform: eval
+        loader:
+          batch_size: 128
+          num_workers: 8
+      denseuav:
+        dataset:
+          type: datasets.valid.uav.denseuav_retrieval
+          metadata_path: data/denseuav
+          split: test
+        transform: eval
+        loader:
+          batch_size: 128
+          num_workers: 8
+runtime:
+  evaluation_trainer:
+    accelerator: gpu
+    devices: 1
+    precision: 32-true
+  experiment_name: gl3d_u1652_joint
+  final_validation: force
+  checkpoint:
+    monitor: val/gl3d/mAP
+    mode: max
+    save_last: true
+    save_top_k: 3
+  trainer:
+    accelerator: gpu
+    devices: auto
+    strategy: ddp_find_unused_parameters_true
+    precision: bf16-mixed
+    max_epochs: 50
+    gradient_clip_val: 1.0
+    check_val_every_n_epoch: 5
+    log_every_n_steps: 50
+    sync_batchnorm: true
+    use_distributed_sampler: false

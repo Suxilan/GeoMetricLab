@@ -1,0 +1,31 @@
+data:
+  name: images
+  root: .
+  dataset:
+    type: gmlab.datasets.utils.image_list.image_dataset
+transform:
+- type: Resize
+  size:
+  - 322
+  - 322
+  interpolation: bicubic
+  antialias: true
+- type: ToImage
+- type: ToDtype
+  dtype: float32
+  scale: true
+- type: Normalize
+  mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  std:
+  - 0.229
+  - 0.224
+  - 0.225
+adapter: gmlab.training.adapters.descriptor_embeddings
+output:
+  layout: global
+  layer: descriptor
+  whitening: false
+  normalization: l2

@@ -20,6 +20,11 @@ loss:
 optimizer:
   type: Adam
   lr: 0.0001
+  groups:
+    - name: gem_power
+      prefixes: [model.aggregator.p]
+      lr_scale: 10.0
+      weight_decay: 0.0
 scheduler:
   type: StepLR
   step_size: 1
@@ -85,6 +90,16 @@ evaluation:
   metric: cosine
   full_ranking: true
 runtime:
+  callbacks:
+    - type: TensorMonitor
+      every_n_steps: 50
+      parameters:
+        pooling_p: model.aggregator.p
+      outputs:
+        pooling_p:
+          module: model.aggregator
+          selector: [1, p]
+          broadcast_batch: true
   seed: 81
   run_dir: results/gmlab/u1652_labels
   trainer:

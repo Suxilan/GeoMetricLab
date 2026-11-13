@@ -215,6 +215,7 @@ data:
           batch_size: 128
           num_workers: 8
 runtime:
+  validate_before_fit: true
   evaluation_trainer:
     accelerator: gpu
     devices: 1

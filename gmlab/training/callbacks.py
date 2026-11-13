@@ -166,10 +166,14 @@ class ValidationSummary(Callback):
         self.run_log.info(message)
 
     def on_train_epoch_end(self, trainer, pl_module) -> None:
+        # Lightning computes sync_dist epoch metrics lazily on access. Every
+        # rank must materialize them before rank-zero rendering, otherwise a
+        # later callback's collectives can collide with these reductions.
+        epoch_metrics = trainer.callback_metrics
         if not trainer.is_global_zero:
             return
         metrics = self._scalar_metrics(
-            trainer.callback_metrics,
+            epoch_metrics,
             lambda name: name.startswith("train/") and name.endswith("_epoch"),
         )
         if metrics:
@@ -362,7 +366,7 @@ class ValidationMedia(Callback):
 
     def __init__(
         self,
-        render: Callable,
+        render: Callable | str,
         *,
         every_n_epochs: int,
         max_items: int,
@@ -374,6 +378,10 @@ class ValidationMedia(Callback):
             for value in (every_n_epochs, max_items)
         ):
             raise ValueError("Media frequency and limit must be positive integers")
+        if isinstance(render, str):
+            from ..components import resolve_component
+
+            render = resolve_component(render)
         if not callable(render):
             raise TypeError("Media render must be callable")
         self.render = render

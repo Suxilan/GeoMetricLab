@@ -29,14 +29,43 @@ SchedulerSpec = (
 )
 
 
-def parameter_groups(module: nn.Module, groups: list[dict]) -> list[dict]:
+def _resolve_group_learning_rate(options: dict, base_lr: float | None) -> None:
+    """Resolve a scale in a copied group specification before native construction."""
+    if "lr_scale" in options:
+        scale = options.pop("lr_scale")
+        if "lr" in options:
+            raise ValueError("Optimizer group cannot combine lr and lr_scale")
+        if (
+            isinstance(scale, bool)
+            or not isinstance(scale, (int, float))
+            or not math.isfinite(scale)
+            or scale < 0
+        ):
+            raise ValueError("lr_scale must be finite and nonnegative")
+        if (
+            isinstance(base_lr, bool)
+            or not isinstance(base_lr, (int, float))
+            or not math.isfinite(base_lr)
+            or base_lr < 0
+        ):
+            raise ValueError("lr_scale requires an explicit finite optimizer.lr")
+        options["lr"] = base_lr * scale
+        if not math.isfinite(options["lr"]):
+            raise ValueError("Scaled learning rate must be finite")
+
+
+def parameter_groups(
+    module: nn.Module, groups: list[dict], *, base_lr: float | None = None
+) -> list[dict]:
     """Select trainable parameters by full module-name prefixes exactly once.
 
     Prefixes include model/criterion ownership, e.g. model.backbone. Unselected
     parameters form the default optimizer group. Overlap or empty selections
-    fail rather than silently changing the learning-rate assignment.
+    fail rather than silently changing the learning-rate assignment. Each group
+    may set lr or lr_scale (base_lr * scale), never both. Resolved rates are
+    native optimizer values; schedulers and checkpoints own subsequent updates.
     """
-    remaining = {
+    trainable_parameters = {
         name: value for name, value in module.named_parameters() if value.requires_grad
     }
     selected_names = set()
@@ -44,6 +73,7 @@ def parameter_groups(module: nn.Module, groups: list[dict]) -> list[dict]:
     for specification in groups:
         options = dict(specification)
         prefixes = options.pop("prefixes")
+        _resolve_group_learning_rate(options, base_lr)
         if "params" in options:
             raise ValueError("Optimizer group params are selected by prefixes")
         if (
@@ -54,7 +84,7 @@ def parameter_groups(module: nn.Module, groups: list[dict]) -> list[dict]:
             raise ValueError("Optimizer prefixes must be a nonempty sequence of names")
         matches = {
             name: parameter
-            for name, parameter in remaining.items()
+            for name, parameter in trainable_parameters.items()
             if any(
                 name == prefix or name.startswith(prefix + ".") for prefix in prefixes
             )
@@ -70,7 +100,11 @@ def parameter_groups(module: nn.Module, groups: list[dict]) -> list[dict]:
             )
         selected_names.update(matches)
         result.append({"params": list(matches.values()), **options})
-    default = [value for name, value in remaining.items() if name not in selected_names]
+    default = [
+        value
+        for name, value in trainable_parameters.items()
+        if name not in selected_names
+    ]
     if default:
         result.append({"params": default})
     return result
@@ -81,7 +115,7 @@ def build_optimizer(module: nn.Module, specification: Mapping) -> Optimizer:
     options = dict(specification)
     groups = options.pop("groups", [])
     parameters = (
-        parameter_groups(module, groups)
+        parameter_groups(module, groups, base_lr=options.get("lr"))
         if groups
         else [parameter for parameter in module.parameters() if parameter.requires_grad]
     )

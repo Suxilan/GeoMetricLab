@@ -118,3 +118,16 @@ not part of the Python distribution. Their own notices and model-specific
 terms apply. Other local reference repositories, datasets, model weights and
 vocabularies are not shipped. See third_party/README.md for the full repository
 inventory, setup and external asset terms.
+
+DAME-WEB pooling adaptation
+---------------------------
+Source: https://github.com/scape-research/DAME-WEB
+Revision: aefe876c80f36fad02221e98c027afcadb77e230
+Original file: lib/TYY_DAME_model.py (DAME_var)
+Code author: Tsun-Yi Yang
+Paper authors: Tsun-Yi Yang, Duy-Kien Nguyen, Huub Heijnen, Vassileios Balntas
+Paper: DAME WEB, ICCV Workshops 2019.
+Adapted file: gmlab/models/aggregator/dame.py
+Terms: GPL-3.0, retained in LICENSES/DAME-WEB.txt.
+Changes: GeoMetricLab input/output adapter, validation, modern initialization.
+The root MIT license does not replace this component's GPL terms.

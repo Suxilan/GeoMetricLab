@@ -38,7 +38,7 @@ be selected with `XFORMERS_DISABLED=1` before importing the external repository.
 
 Aggregators include Avg, CLS, GeM, SCPP, SuperGeM, BoQ, Salad, NetVLAD,
 GhostVLAD, SuperVLAD, CosPlace, EigenPlace, CricaVPR, CFP, SoftPCFP, RegVPR,
-DGeM and CGeM. They return `(descriptor [N,D], auxiliary)` and expose
+DGeM, CGeM, DAME and GGeM. They return `(descriptor [N,D], auxiliary)` and expose
 `out_channels`. `DinoAggregation(aggregator=...)` passes DINO's tuple to
 CLS-dependent aggregators; patch-only heads use the `patch_tokens` adapter.
 
@@ -348,3 +348,176 @@ experiment settings. Historical result records retain their original policy.
 and uses the same automatic policy. The pair CLI prefers GPU by default;
 `--no-prefer-gpu` disables GPU selection. Vocabulary assignment in classical
 VLAD tools owns its existing index lifecycle and is not retrieval ranking.
+
+## Optimizer learning-rate multipliers
+
+`optimizer.lr` is the base learning rate. Each prefix-selected group may declare
+an absolute `lr` OR `lr_scale`, never both. A scale requires an explicit base rate;
+zero is allowed, but does not disable gradient computation. Unselected trainable
+parameters use the optimizer defaults. Prefixes refer to the Lightning module,
+including `model.` or `criterion.`; overlap and empty matches are errors.
+
+```yaml
+optimizer:
+  type: AdamW
+  lr: 0.0001
+  weight_decay: 0.01
+  groups:
+    - name: backbone
+      prefixes: [model.backbone]
+      lr_scale: 0.1
+    - name: gem_power
+      prefixes: [model.aggregator.p]
+      lr_scale: 10.0
+      weight_decay: 0.0
+```
+
+Scales resolve once into native optimizer parameter groups. Native schedulers and
+checkpoint restoration then own the rates; resume does not reapply multipliers.
+Multiplicative schedules retain their ratios. A cosine scheduler with a common
+absolute `eta_min` does not retain exact ratios near its floor; use `eta_min: 0`
+if exact proportional rates are required with `WarmupCosine`.
+
+`GeM` now defaults to the official `clamp(x, eps)` power mean with an unconstrained
+shared exponent. Its gmlab adapter still returns `(descriptor [B,C], {p: [1,1,1]})`.
+`mode: abs` explicitly retains the magnitude-input variant. Old checkpoints keep
+the same `p` state key, but default feature semantics have changed: recompute
+features/caches and compare evaluation policies explicitly. The previous exponent
+floor is removed in both modes; zero or unstable exponents require investigation,
+not silent clipping. The official shared-p optimizer uses a 10x learning rate and
+zero decay; the multiplier remains an explicit experiment choice.
+
+## Parameter, auxiliary-output and image observations
+
+`TensorMonitor` is an opt-in native Lightning callback. It logs mean/min/max/std
+of selected parameters, their gradients and forward outputs. It never adds a
+loss, changes an output, or runs a second model forward. For GeM:
+
+```yaml
+runtime:
+  callbacks:
+    - type: TensorMonitor
+      every_n_steps: 50
+      parameters:
+        pooling_p: model.aggregator.p
+      outputs:
+        pooling_p:
+          module: model.aggregator
+          selector: [1, p]
+          broadcast_batch: true
+```
+
+Curves include `observe/parameter/pooling_p/mean`,
+`observe/gradient/pooling_p/mean`, `observe/gradient/pooling_p/present` and
+`observe/output/pooling_p/mean`. Parameters are recorded at training start and after
+selected optimizer steps; gradients are sampled after AMP unscale, before
+clipping/step. A missing gradient reports `present=0`, not a fabricated zero.
+For DGeM, omit the parameter selection and keep the auxiliary-output selection:
+its p is a predicted [B,1,1] Tensor, not a standalone parameter. Arbitrary module
+outputs/intermediate features use the same index/key selector. Observations are
+global interval statistics over all training forwards and ranks, including all
+accumulation microbatches. Mean/std use element counts, while min/max use global
+extrema, not averages of batch extrema. Epoch end emits any remaining interval.
+`count` records observed elements (sample-group values for grouped p), not unique
+images. For shared GeM p, `broadcast_batch: true` weights each forward by its input
+batch size; omit it for dynamic outputs. Validation and backward recomputation
+are excluded. Partial intervals restart on resume. Parameter/gradient summaries
+remain rank-zero snapshots. Conditional outputs can be absent on some ranks.
+Only detached FP64 moments survive a hook; communication occurs at emission.
+Cleanup also runs on failure. These diagnostics are sent directly to native loggers (including
+CSV and SwanLab), not the default console or checkpoint-monitor metric namespace.
+
+Image logging already uses `ValidationMedia`, now also available by short type:
+
+```yaml
+runtime:
+  callbacks:
+    - type: ValidationMedia
+      render: my_package.visualization.render_retrieval
+      every_n_epochs: 1
+      max_items: 4
+      key: val/retrieval_images
+```
+
+The renderer is an importable function or a Python callable with signature
+`render(batch, outputs, max_items) -> (images, captions)`. It receives detached
+CPU tensors from the existing validation step. It should limit work to max_items
+and return the same number of images/captions. Images go to compatible logger
+`log_image` methods (including SwanLab); a scalar-only CSV logger cannot store
+images. Rendering is skipped during sanity checking, on nonzero ranks, or without
+a compatible sink. Optional `source` selects a named validation loader. This is
+validation media, not automatic logging of every training image. Additional media
+such as tables/audio use native logger APIs from injected callbacks; no universal
+media conversion or task-specific rendering is imposed on models or losses.
+
+## DAME official-code conformance
+
+`DAME` adapts the authors' `DAME_var`, rather than filling in missing details
+from the paper. The pinned source is:
+https://github.com/scape-research/DAME-WEB/blob/aefe876c80f36fad02221e98c027afcadb77e230/lib/TYY_DAME_model.py
+
+Code author: Tsun-Yi Yang. Paper: Yang, Nguyen, Heijnen and Balntas, *DAME WEB*,
+ICCV Workshops 2019. The adaptation retains GPL-3.0 in LICENSES/DAME-WEB.txt
+and attribution in NOTICE. It is not covered solely by the root MIT license.
+
+The following details match upstream:
+
+- Raw spatial sample variance, with N-1 divisor (`correction=1`).
+- One C->1 FC layer. Weights start at zero; bias is `(ini_p-1)/delta_scale`.
+- `p = 1 + delta_scale * sigmoid(alpha * fc(variance))`.
+- Defaults: delta_scale=4, ini_p=3, alpha=1. Initial p is about 3.489837,
+  not 3. The sigmoid's inverse is deliberately NOT used to "fix" upstream.
+- Raw inputs clamped at 1e-6, powers, native average pooling, reciprocal power.
+  There is no abs option, LayerNorm, hidden MLP or forced FP32/cast-back path.
+- FC state dict names match upstream. The surrounding encoder owns normalization.
+
+Adapter differences: accept `in_channels` instead of `ch`, return `[B,C]` plus
+`{"p": [B,1,1]}` instead of a bare `[B,1]` p Tensor, and reject spatial size
+N<=1 instead of producing undefined sample variance. Noncontiguous inputs are
+accepted through flatten. Native AMP follows the installed PyTorch operations;
+this is not a claim of reproducing the authors' 2019 runtime bit-for-bit.
+Conformance tests use an extracted, otherwise unmodified upstream class and
+compare initialization, outputs and gradients, including nonzero trained head
+weights, float32/float64 and CPU BF16 autocast.
+
+Only the pooling operator is adapted. Backbone freezing, training objectives,
+normalization and whitening remain external pipeline choices. Using this
+component alone does not reproduce the full DAME-WEB training or compression
+protocol. A component configuration with upstream defaults is:
+
+```yaml
+type: DAME
+delta_scale: 4.0
+ini_p: 3.0
+alpha: 1.0
+```
+
+The encoder injects `in_channels`. Configure it explicitly when constructing
+this component directly in Python.
+
+## Static grouped GeM
+
+`GGeM` independently implements the pooling equations in Ko et al., *Group
+Generalized Mean Pooling for Vision Transformer*, using Appendix B.1,
+Algorithm 1: https://arxiv.org/abs/2212.04114v1.
+
+```yaml
+type: GGeM
+groups: 12
+p: 3.0
+eps: 1.0e-6
+mode: clamp
+```
+
+Input is `[B,C,H,W]`, with C divisible by `groups`; the encoder injects C as
+`in_channels`. Each group has one static trainable exponent. Channel c uses
+exponent `c % groups`, following the appendix's interleaved reshape rather than
+the main text's contiguous-group description. These groups do not necessarily
+correspond to transformer attention heads.
+
+The output is `(descriptor [B,C], {p: [B,groups,1]})`. Shared group exponents are
+expanded across images for observation; `broadcast_batch` is not needed.
+`mode: clamp` follows the published operator; `mode: abs` is an explicit
+magnitude-input adaptation. Native autocast and dtype promotion are retained.
+As with GeM, exponents are unconstrained during optimization and must remain
+away from zero. Optimizer learning-rate multipliers are explicit recipe choices.
